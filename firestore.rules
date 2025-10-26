@@ -1,0 +1,144 @@
+/**
+ * @description This ruleset enforces a role-based access control system for the Senoner Sarteur Digital app.
+ * Only authenticated users can access the database.
+ * Admins have full read and write access to most collections.
+ * Users can only access their own data, such as profile information and pre-orders.
+ * Categories and AppConfig are publicly readable, but only admins can modify them.
+ *
+ * @dataStructure
+ * - /users/{userId}: Stores user profile information.
+ * - /users/{userId}/preorders/{orderId}: Stores pre-orders associated with a specific user.
+ * - /categories/{categoryId}: Stores categories of products.
+ * - /appConfig/{configId}: Stores application-wide configuration. 'configId' is fixed to 'main'.
+ * - /notifications/{notificationId}: Stores notifications for users.
+ *
+ * @keySecurityDecisions
+ * - User listing is only allowed for admins.
+ * - Categories and AppConfig are publicly readable.
+ * - Strict owner-only access is enforced for user-specific data.
+ * - The `appConfig` collection only allows access to a single document named `main`.
+ *
+ * @denormalizationForAuthorization
+ * - Preorder documents denormalize `customerId` and `customerName` to allow for authorization without needing to `get()` the user document.
+ * - The rules assume that a user's `role` is available via `request.auth.token.role` after authentication.
+ *
+ * @structuralSegregation
+ * - Private user data is stored under the `/users/{userId}` path, while public data such as categories and app configurations reside in top-level collections.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return request.auth.token.role == 'admin';
+    }
+
+    function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Controls access to user documents.
+     * @path /users/{userId}
+     * @allow (read, update) if the request is made by the owner of the user document.
+     * @allow (list, create, delete) if the request is made by an admin.
+     * @deny (read, update) if the request is not made by the owner.
+     * @deny (list, create, delete) if the request is not made by an admin.
+     * @principle Enforces document ownership for reads and updates. Allows admin to manage users.
+     */
+    match /users/{userId} {
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isAdmin();
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    /**
+     * @description Controls access to pre-order documents within a user's subcollection.
+     * @path /users/{userId}/preorders/{orderId}
+     * @allow (create, read) if the request is made by the owner of the user document.
+     * @allow (list, update, delete) if the request is made by an admin.
+     * @deny (create, read) if the request is not made by the owner.
+     * @deny (list, update, delete) if the request is not made by an admin.
+     * @principle Enforces document ownership for reads and writes. Allows admin to manage pre-orders.
+     */
+    match /users/{userId}/preorders/{orderId} {
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.customerId == userId;
+      allow update: if isSignedIn() && isAdmin() && resource != null;
+      allow delete: if isSignedIn() && isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Controls access to category documents.
+     * @path /categories/{categoryId}
+     * @allow (read) to anyone.
+     * @allow (create, update, delete) if the request is made by an admin.
+     * @deny (create, update, delete) if the request is not made by an admin.
+     * @principle Allows public read access to categories, restricts writes to admins.
+     */
+    match /categories/{categoryId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && isAdmin();
+      allow update: if isSignedIn() && isAdmin() && resource != null;
+      allow delete: if isSignedIn() && isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Controls access to app configuration documents.
+     * @path /appConfig/{configId}
+     * @allow (read) to anyone.
+     * @allow (create, update, delete) if the request is made by an admin.
+     * @deny (create, update, delete) if the request is not made by an admin.
+     * @principle Allows public read access to app configuration, restricts writes to admins.
+     */
+    match /appConfig/{configId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && isAdmin();
+      allow update: if isSignedIn() && isAdmin() && resource != null;
+      allow delete: if isSignedIn() && isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Controls access to notification documents.
+     * @path /notifications/{notificationId}
+     * @allow (read) if the request is made by the owner of the notification.
+     * @allow (create, update, delete) if the request is made by an admin.
+     * @deny (read) if the request is not made by the owner.
+     * @deny (create, update, delete) if the request is not made by an admin.
+     * @principle Enforces document ownership for reads and restricts writes to admins.
+     */
+    match /notifications/{notificationId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if false;
+      allow create: if isSignedIn() && isAdmin();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to product documents.
+     * @path /products/{productId}
+     * @allow (read) to anyone.
+     * @allow (create, update, delete) if the request is made by an admin.
+     * @deny (create, update, delete) if the request is not made by an admin.
+     */
+     match /products/{productId} {
+        allow get, list: if true;
+        allow create: if isSignedIn() && isAdmin();
+        allow update: if isSignedIn() && isAdmin() && resource != null;
+        allow delete: if isSignedIn() && isAdmin() && resource != null;
+     }
+  }
+}

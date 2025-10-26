@@ -1,0 +1,468 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the Senoner Sarteur Digital app.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user (Firebase UID)."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user (customer, employee, or admin)."
+        },
+        "points": {
+          "type": "number",
+          "description": "Loyalty points accumulated by the user."
+        },
+        "rewards": {
+          "type": "array",
+          "description": "An array of reward objects associated with the user.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "coupons": {
+          "type": "array",
+          "description": "An array of coupon objects associated with the user.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lastWheelSpin": {
+          "type": "string",
+          "description": "Timestamp of the user's last spin of the Wheel of Fortune.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "role",
+        "points",
+        "rewards",
+        "coupons"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Represents a category of products available for pre-order.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the category."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the category (e.g., 'Sushi-Donnerstag')."
+        },
+        "image": {
+          "type": "string",
+          "description": "URL to the image representing the category."
+        },
+        "pickupDays": {
+          "type": "array",
+          "description": "Array of days when products in this category can be picked up.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "products": {
+          "type": "array",
+          "description": "Array of product IDs included in this category.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "image",
+        "pickupDays",
+        "products"
+      ]
+    },
+    "Preorder": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Preorder",
+      "type": "object",
+      "description": "Represents a customer's pre-order.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the pre-order."
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Reference to User. ID of the user who placed the order. (Relationship: User 1:N Preorder)"
+        },
+        "customerName": {
+          "type": "string",
+          "description": "The name of the customer who placed the order."
+        },
+        "details": {
+          "type": "string",
+          "description": "Details of the ordered items (e.g., 'Sushi-Box Groß, 2 Stück')."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date for which the pre-order is scheduled (e.g., '2025-10-30').",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the pre-order (pending, ready, collected)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the pre-order was created.",
+          "format": "date-time"
+        },
+        "totalPrice": {
+          "type": "number",
+          "description": "The total price of the pre-order."
+        }
+      },
+      "required": [
+        "id",
+        "customerId",
+        "customerName",
+        "details",
+        "date",
+        "status",
+        "createdAt",
+        "totalPrice"
+      ]
+    },
+    "AppConfig": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AppConfig",
+      "type": "object",
+      "description": "Configuration settings for the Senoner Sarteur Digital app.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the app configuration (fixed to 'main')."
+        },
+        "seasonalHighlightText": {
+          "type": "string",
+          "description": "Text for the seasonal highlight in the app."
+        },
+        "isWheelOfFortuneActive": {
+          "type": "boolean",
+          "description": "Indicates whether the Wheel of Fortune feature is currently active."
+        },
+        "wheelConfig": {
+          "type": "array",
+          "description": "Configuration for the Wheel of Fortune prizes.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "seasonalHighlightText",
+        "isWheelOfFortuneActive",
+        "wheelConfig"
+      ]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a push notification sent to a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the notification."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. ID of the user to whom the notification is addressed. (Relationship: User 1:N Notification)"
+        },
+        "message": {
+          "type": "string",
+          "description": "The content of the notification message."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of notification (order, reward, general)."
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Indicates whether the notification has been read by the user."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the notification was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "message",
+        "type",
+        "read",
+        "createdAt"
+      ]
+    },
+    "Product": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product",
+      "type": "object",
+      "description": "Represents a product in a category that is available for ordering.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the product."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the product (e.g., 'Sushi-Box Groß')."
+        },
+        "image": {
+          "type": "string",
+          "description": "URL to the image representing the product."
+        },
+        "orderOptions": {
+          "type": "array",
+          "description": "Array of order options available for the product (e.g., size, quantity).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Reference to Category. ID of the category this product belongs to. (Relationship: Category 1:N Product)"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "image",
+        "orderOptions",
+        "categoryId"
+      ]
+    },
+    "WheelConfig": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "WheelConfig",
+      "type": "object",
+      "description": "Represents the wheel config, this manages the prizes on the wheel and is assigned to the app config.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the prize on the wheel."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the prize on the wheel."
+        },
+        "value": {
+          "type": "number",
+          "description": "The value of the prize on the wheel."
+        },
+        "probability": {
+          "type": "number",
+          "description": "The probability of landing on this prize."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "value",
+        "probability"
+      ]
+    },
+    "Reward": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Reward",
+      "type": "object",
+      "description": "Represents the reward for accumulated points, and assigned to the user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the reward."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the reward."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date when the reward was issued.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "date"
+      ]
+    },
+    "Coupon": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Coupon",
+      "type": "object",
+      "description": "Represents the coupon assigned to users and used for rewards.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the coupon."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of the coupon."
+        },
+        "value": {
+          "type": "number",
+          "description": "The value of the coupon."
+        },
+        "description": {
+          "type": "string",
+          "description": "The description of the coupon."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "value",
+        "description"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user data, including profile information, roles, loyalty points, rewards, and coupons.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase UID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/preorders/{orderId}",
+        "definition": {
+          "entityName": "Preorder",
+          "schema": {
+            "$ref": "#/backend/entities/Preorder"
+          },
+          "description": "Stores pre-orders associated with a specific user. Includes denormalized 'customerName' and 'customerId' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase UID of the user placing the order."
+            },
+            {
+              "name": "orderId",
+              "description": "The unique identifier for the pre-order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Stores categories of products available for pre-order.",
+          "params": [
+            {
+              "name": "categoryId",
+              "description": "The unique identifier for the category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/appConfig/{configId}",
+        "definition": {
+          "entityName": "AppConfig",
+          "schema": {
+            "$ref": "#/backend/entities/AppConfig"
+          },
+          "description": "Stores application-wide configuration settings. The 'configId' is fixed to 'main'.",
+          "params": [
+            {
+              "name": "configId",
+              "description": "The unique identifier for the app configuration. Should always be 'main'."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": {
+            "$ref": "#/backend/entities/Notification"
+          },
+          "description": "Stores notifications for all users. Consider denormalizing user role into this document.",
+          "params": [
+            {
+              "name": "notificationId",
+              "description": "The unique identifier for the notification."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Stores product information, each product has a categoryId property.",
+          "params": [
+            {
+              "name": "productId",
+              "description": "The unique identifier for the product."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to meet the application's requirements while adhering to the core design principles of Authorization Independence, Clarity of Intent, DBAC (Database Authenticated Control - Roles in Database), QAPs (Rules are not Filters), and Invariants. \n\nAuthorization Independence is achieved primarily through denormalization. For instance, the `preorders` subcollection under `users/{userId}` includes the `customerName` and `customerId`. This avoids the need for `get()` calls to the `users` document to verify ownership during creation and read operations. Similarly, while not explicitly listed as denormalized, it is recommended to include the user's `role` in the notification documents under the `/notifications` collection or under `/users/{userId}/notifications/{notificationId}`, depending on listing requirements. This allows for direct rule evaluation based on the request without needing to fetch user data. The choice between a top-level collection and a subcollection for notifications is based on listability requirements.  If the application needs to list all notifications regardless of user, a top-level `/notifications` collection is more suitable.  If notifications are always listed in the context of a specific user, the subcollection is preferable.\n\nThe structure supports QAPs (Rules are not Filters) by segregating data based on access needs. For example, categories and appConfig have different access rules than user data. The application uses path-based ownership for user-specific data like preorders (`/users/{userId}/preorders/{orderId}`), which simplifies security rules and ensures that only the owner or an admin can access the data.  The use of dedicated collections for admin roles (`/roles_admin/{uid}`) is the preferred Existence over Content strategy.\n\nFurthermore, the predictable schema, explicit state modeling (using the `status` field in `preorders`), and semantic naming conventions improve clarity and maintainability. This design facilitates simple, robust, and easily debuggable security rules, aligning with the stated goals."
+  }
+}
