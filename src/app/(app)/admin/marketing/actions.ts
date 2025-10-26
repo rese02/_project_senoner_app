@@ -11,7 +11,7 @@ const formSchema = z.object({
 type State = {
   success: boolean;
   ideas?: string[];
-  error?: string;
+  error?: any;
 };
 
 export async function getMarketingIdeas(prevState: any, formData: FormData): Promise<State> {

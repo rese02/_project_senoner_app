@@ -14,37 +14,37 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
+import { useMemo } from 'react';
 
-const customerNavItems = [
-  { href: '/dashboard', label: 'Home', icon: Home },
-  { href: '/dashboard/loyalty', label: 'Punkte', icon: Star },
-  { href: '/pre-order', label: 'Bestellen', icon: ShoppingBasket },
-];
-
-const employeeNavItems = [
-    { href: '/employee/scan', label: 'Scannen', icon: QrCode },
-];
-
-const adminNavItems = [
-    { href: '/admin', label: 'Home', icon: BarChart },
-    { href: '/admin/orders', label: 'Best.', icon: Package },
-    { href: '/admin/customers', label: 'Kunden', icon: Users },
-];
+const navConfig = {
+  customer: [
+    { href: '/dashboard', label: 'Home', icon: Home },
+    { href: '/dashboard/loyalty', label: 'Punkte', icon: Heart },
+    { href: '/pre-order', label: 'Bestellen', icon: ShoppingBasket },
+  ],
+  employee: [
+      { href: '/employee/scan', label: 'Scannen', icon: QrCode },
+  ],
+  admin: [
+      { href: '/admin', label: 'Home', icon: BarChart },
+      { href: '/admin/orders', label: 'Best.', icon: Package },
+      { href: '/admin/customers', label: 'Kunden', icon: Users },
+  ],
+};
 
 
 export function MobileNav() {
   const pathname = usePathname();
 
-  const role = pathname.split('/')[1] || 'dashboard';
+  const role = useMemo(() => {
+    const segment = pathname.split('/')[1];
+    if (segment === 'admin') return 'admin';
+    if (segment === 'employee') return 'employee';
+    // Default to customer for /dashboard, /pre-order, etc.
+    return 'customer';
+  }, [pathname]);
 
-  let navItems;
-  if (role === 'admin') {
-    navItems = adminNavItems;
-  } else if (role === 'employee') {
-    navItems = employeeNavItems;
-  } else {
-    navItems = customerNavItems;
-  }
+  const navItems = navConfig[role];
 
   const renderNavItem = (item: { href: string; label: string; icon: React.ElementType }) => {
     const isActive = pathname === item.href;
