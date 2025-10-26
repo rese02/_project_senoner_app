@@ -1,7 +1,6 @@
 {
   "entities": {
     "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
       "description": "Represents a user of the Senoner Sarteur Digital app.",
@@ -25,7 +24,8 @@
         },
         "role": {
           "type": "string",
-          "description": "The role of the user (customer, employee, or admin)."
+          "description": "The role of the user (customer, employee, or admin).",
+          "enum": ["customer", "employee", "admin"]
         },
         "points": {
           "type": "number",
@@ -35,14 +35,14 @@
           "type": "array",
           "description": "An array of reward objects associated with the user.",
           "items": {
-            "type": "string"
+            "$ref": "#/entities/Reward"
           }
         },
         "coupons": {
           "type": "array",
           "description": "An array of coupon objects associated with the user.",
           "items": {
-            "type": "string"
+            "$ref": "#/entities/Coupon"
           }
         },
         "lastWheelSpin": {
@@ -56,14 +56,10 @@
         "firstName",
         "lastName",
         "email",
-        "role",
-        "points",
-        "rewards",
-        "coupons"
+        "role"
       ]
     },
     "Category": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Category",
       "type": "object",
       "description": "Represents a category of products available for pre-order.",
@@ -89,9 +85,9 @@
         },
         "products": {
           "type": "array",
-          "description": "Array of product IDs included in this category.",
+          "description": "Array of products included in this category.",
           "items": {
-            "type": "string"
+            "$ref": "#/entities/Product"
           }
         }
       },
@@ -99,12 +95,10 @@
         "id",
         "name",
         "image",
-        "pickupDays",
-        "products"
+        "pickupDays"
       ]
     },
     "Preorder": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Preorder",
       "type": "object",
       "description": "Represents a customer's pre-order.",
@@ -132,7 +126,8 @@
         },
         "status": {
           "type": "string",
-          "description": "The status of the pre-order (pending, ready, collected)."
+          "description": "The status of the pre-order (pending, ready, collected).",
+          "enum": ["pending", "ready", "collected"]
         },
         "createdAt": {
           "type": "string",
@@ -156,7 +151,6 @@
       ]
     },
     "AppConfig": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "AppConfig",
       "type": "object",
       "description": "Configuration settings for the Senoner Sarteur Digital app.",
@@ -177,19 +171,17 @@
           "type": "array",
           "description": "Configuration for the Wheel of Fortune prizes.",
           "items": {
-            "type": "string"
+            "$ref": "#/entities/WheelConfig"
           }
         }
       },
       "required": [
         "id",
         "seasonalHighlightText",
-        "isWheelOfFortuneActive",
-        "wheelConfig"
+        "isWheelOfFortuneActive"
       ]
     },
     "Notification": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Notification",
       "type": "object",
       "description": "Represents a push notification sent to a user.",
@@ -230,7 +222,6 @@
       ]
     },
     "Product": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Product",
       "type": "object",
       "description": "Represents a product in a category that is available for ordering.",
@@ -251,7 +242,11 @@
           "type": "array",
           "description": "Array of order options available for the product (e.g., size, quantity).",
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "type": {"type": "string"},
+              "value": {"type": "number"}
+            }
           }
         },
         "categoryId": {
@@ -262,13 +257,10 @@
       "required": [
         "id",
         "name",
-        "image",
-        "orderOptions",
-        "categoryId"
+        "image"
       ]
     },
     "WheelConfig": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "WheelConfig",
       "type": "object",
       "description": "Represents the wheel config, this manages the prizes on the wheel and is assigned to the app config.",
@@ -298,7 +290,6 @@
       ]
     },
     "Reward": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Reward",
       "type": "object",
       "description": "Represents the reward for accumulated points, and assigned to the user.",
@@ -324,7 +315,6 @@
       ]
     },
     "Coupon": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Coupon",
       "type": "object",
       "description": "Represents the coupon assigned to users and used for rewards.",
@@ -356,113 +346,39 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user data, including profile information, roles, loyalty points, rewards, and coupons.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The Firebase UID of the user."
-            }
-          ]
-        }
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
       },
-      {
-        "path": "/users/{userId}/preorders/{orderId}",
-        "definition": {
-          "entityName": "Preorder",
-          "schema": {
-            "$ref": "#/backend/entities/Preorder"
-          },
-          "description": "Stores pre-orders associated with a specific user. Includes denormalized 'customerName' and 'customerId' for authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The Firebase UID of the user placing the order."
-            },
-            {
-              "name": "orderId",
-              "description": "The unique identifier for the pre-order."
-            }
-          ]
-        }
+      "description": "Stores user data, including profile information, roles, loyalty points, rewards, and coupons."
+    },
+    "/users/{userId}/preorders/{orderId}": {
+      "schema": {
+        "$ref": "#/entities/Preorder"
       },
-      {
-        "path": "/categories/{categoryId}",
-        "definition": {
-          "entityName": "Category",
-          "schema": {
-            "$ref": "#/backend/entities/Category"
-          },
-          "description": "Stores categories of products available for pre-order.",
-          "params": [
-            {
-              "name": "categoryId",
-              "description": "The unique identifier for the category."
-            }
-          ]
-        }
+      "description": "Stores pre-orders associated with a specific user. Includes denormalized 'customerName' and 'customerId' for authorization independence."
+    },
+    "/categories/{categoryId}": {
+      "schema": {
+        "$ref": "#/entities/Category"
       },
-      {
-        "path": "/appConfig/{configId}",
-        "definition": {
-          "entityName": "AppConfig",
-          "schema": {
-            "$ref": "#/backend/entities/AppConfig"
-          },
-          "description": "Stores application-wide configuration settings. The 'configId' is fixed to 'main'.",
-          "params": [
-            {
-              "name": "configId",
-              "description": "The unique identifier for the app configuration. Should always be 'main'."
-            }
-          ]
-        }
+      "description": "Stores categories of products available for pre-order."
+    },
+    "/appConfig/main": {
+      "schema": {
+        "$ref": "#/entities/AppConfig"
       },
-      {
-        "path": "/notifications/{notificationId}",
-        "definition": {
-          "entityName": "Notification",
-          "schema": {
-            "$ref": "#/backend/entities/Notification"
-          },
-          "description": "Stores notifications for all users. Consider denormalizing user role into this document.",
-          "params": [
-            {
-              "name": "notificationId",
-              "description": "The unique identifier for the notification."
-            }
-          ]
-        }
+      "description": "Stores application-wide configuration settings. The document ID is fixed to 'main'."
+    },
+    "/notifications/{notificationId}": {
+      "schema": {
+        "$ref": "#/entities/Notification"
       },
-      {
-        "path": "/products/{productId}",
-        "definition": {
-          "entityName": "Product",
-          "schema": {
-            "$ref": "#/backend/entities/Product"
-          },
-          "description": "Stores product information, each product has a categoryId property.",
-          "params": [
-            {
-              "name": "productId",
-              "description": "The unique identifier for the product."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore structure is designed to meet the application's requirements while adhering to the core design principles of Authorization Independence, Clarity of Intent, DBAC (Database Authenticated Control - Roles in Database), QAPs (Rules are not Filters), and Invariants. \n\nAuthorization Independence is achieved primarily through denormalization. For instance, the `preorders` subcollection under `users/{userId}` includes the `customerName` and `customerId`. This avoids the need for `get()` calls to the `users` document to verify ownership during creation and read operations. Similarly, while not explicitly listed as denormalized, it is recommended to include the user's `role` in the notification documents under the `/notifications` collection or under `/users/{userId}/notifications/{notificationId}`, depending on listing requirements. This allows for direct rule evaluation based on the request without needing to fetch user data. The choice between a top-level collection and a subcollection for notifications is based on listability requirements.  If the application needs to list all notifications regardless of user, a top-level `/notifications` collection is more suitable.  If notifications are always listed in the context of a specific user, the subcollection is preferable.\n\nThe structure supports QAPs (Rules are not Filters) by segregating data based on access needs. For example, categories and appConfig have different access rules than user data. The application uses path-based ownership for user-specific data like preorders (`/users/{userId}/preorders/{orderId}`), which simplifies security rules and ensures that only the owner or an admin can access the data.  The use of dedicated collections for admin roles (`/roles_admin/{uid}`) is the preferred Existence over Content strategy.\n\nFurthermore, the predictable schema, explicit state modeling (using the `status` field in `preorders`), and semantic naming conventions improve clarity and maintainability. This design facilitates simple, robust, and easily debuggable security rules, aligning with the stated goals."
+      "description": "Stores notifications for all users."
+    }
   }
 }

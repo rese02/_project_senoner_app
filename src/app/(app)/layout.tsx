@@ -1,4 +1,5 @@
 import { MainNav } from '@/components/main-nav';
+import { MobileNav } from '@/components/mobile-nav';
 import { UserNav } from '@/components/user-nav';
 import { Sidebar, SidebarContent, SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 
@@ -21,10 +22,11 @@ export default function AppLayout({
             <UserNav />
           </div>
         </header>
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
-        <footer className="border-t p-4 text-center text-xs text-muted-foreground">
+        <main className="flex-1 p-4 pb-20 sm:p-6 sm:pb-6">{children}</main>
+        <footer className="hidden border-t p-4 text-center text-xs text-muted-foreground md:block">
           © {new Date().getFullYear()} Senoner Sarteur Digital
         </footer>
+        <MobileNav />
       </SidebarInset>
     </SidebarProvider>
   );
