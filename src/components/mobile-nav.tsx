@@ -2,13 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Star, ShoppingBasket, QrCode, LayoutGrid } from 'lucide-react';
+import { Home, Star, ShoppingBasket, QrCode, LayoutGrid, BarChart, Settings, Heart, Users, Package, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
 
@@ -23,18 +26,25 @@ const employeeNavItems = [
 ];
 
 const adminNavItems = [
-    { href: '/admin', label: 'Admin Home', icon: Home },
+    { href: '/admin', label: 'Home', icon: BarChart },
+    { href: '/admin/orders', label: 'Best.', icon: Package },
+    { href: '/admin/customers', label: 'Kunden', icon: Users },
 ];
 
 
 export function MobileNav() {
   const pathname = usePathname();
 
-  // This is a simple role simulation. In a real app, you'd get the user's role from your auth context.
-  const role = pathname.startsWith('/admin') ? 'admin' : pathname.startsWith('/employee') ? 'employee' : 'customer';
+  const role = pathname.split('/')[1] || 'dashboard';
 
-  const navItems = role === 'admin' ? adminNavItems : role === 'employee' ? employeeNavItems : customerNavItems;
-
+  let navItems;
+  if (role === 'admin') {
+    navItems = adminNavItems;
+  } else if (role === 'employee') {
+    navItems = employeeNavItems;
+  } else {
+    navItems = customerNavItems;
+  }
 
   const renderNavItem = (item: { href: string; label: string; icon: React.ElementType }) => {
     const isActive = pathname === item.href;
@@ -65,9 +75,17 @@ export function MobileNav() {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="mb-2">
-                <DropdownMenuItem asChild><Link href="/dashboard/profile">Profil</Link></DropdownMenuItem>
-                <DropdownMenuItem asChild><Link href="/admin">Admin</Link></DropdownMenuItem>
-                <DropdownMenuItem asChild><Link href="/employee/scan">Mitarbeiter</Link></DropdownMenuItem>
+                 <DropdownMenuLabel>Kundenbereich</DropdownMenuLabel>
+                <DropdownMenuGroup>
+                    <DropdownMenuItem asChild><Link href="/dashboard/profile"><Settings className="mr-2"/>Profil</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="/dashboard/wheel-of-fortune"><Star className="mr-2"/>Glücksrad</Link></DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Andere Bereiche</DropdownMenuLabel>
+                <DropdownMenuGroup>
+                    <DropdownMenuItem asChild><Link href="/admin"><BarChart className="mr-2"/>Admin</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="/employee/scan"><QrCode className="mr-2"/>Mitarbeiter</Link></DropdownMenuItem>
+                </DropdownMenuGroup>
             </DropdownMenuContent>
         </DropdownMenu>
       </div>

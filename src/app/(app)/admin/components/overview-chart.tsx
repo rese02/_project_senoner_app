@@ -2,8 +2,9 @@
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartConfig, ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { useEffect, useState } from 'react';
 
-const data = [
+const generateData = () => [
   { date: 'Mo', sales: Math.floor(Math.random() * 1000) + 200 },
   { date: 'Di', sales: Math.floor(Math.random() * 1000) + 200 },
   { date: 'Mi', sales: Math.floor(Math.random() * 1000) + 200 },
@@ -21,6 +22,16 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function OverviewChart() {
+  const [data, setData] = useState<any[]>([]);
+
+  useEffect(() => {
+    setData(generateData());
+  }, []);
+
+  if (!data.length) {
+    return <div className="h-[350px] w-full flex items-center justify-center"><p>Lade Verkaufsübersicht...</p></div>;
+  }
+
   return (
     <ChartContainer config={chartConfig} className="h-[350px] w-full">
       <ResponsiveContainer width="100%" height="100%">

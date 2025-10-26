@@ -1,3 +1,5 @@
+'use client';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Link from 'next/link';
+import { handleLogout } from '@/app/(auth)/actions';
 
 export function UserNav() {
   const userAvatar = PlaceHolderImages.find((img) => img.id === 'user-avatar-1');
@@ -34,14 +37,18 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem disabled>Profil</DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/profile">Profil</Link>
+          </DropdownMenuItem>
           <DropdownMenuItem disabled>Abrechnung</DropdownMenuItem>
           <DropdownMenuItem disabled>Einstellungen</DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/login">Abmelden</Link>
-        </DropdownMenuItem>
+         <form action={handleLogout}>
+            <Button type="submit" variant="ghost" className="w-full justify-start font-normal px-2">
+                Abmelden
+            </Button>
+        </form>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -23,10 +23,31 @@ import {
 } from '@/components/ui/sidebar';
 import { AppLogo } from './app-logo';
 
+const customerNav = [
+  { href: '/dashboard', label: 'Dashboard', icon: Home },
+  { href: '/pre-order', label: 'Vorbestellung', icon: ShoppingBasket },
+  { href: '/dashboard/loyalty', label: 'Treuekarte', icon: Heart },
+  { href: '/dashboard/wheel-of-fortune', label: 'Glücksrad', icon: Star },
+];
+
+const employeeNav = [
+    { href: '/employee/scan', label: 'QR scannen', icon: QrCode },
+];
+
+const adminNav = [
+    { href: '/admin', label: 'Statistiken', icon: BarChart },
+    { href: '/admin/orders', label: 'Bestellungen', icon: Package },
+    { href: '/admin/products', label: 'Produkte', icon: ShoppingBasket },
+    { href: '/admin/customers', label: 'Kunden', icon: Users },
+    { href: '/admin/seasonal', label: 'Marketing', icon: Lightbulb },
+];
+
+
 export function MainNav() {
   const pathname = usePathname();
-
   const isActive = (path: string) => pathname === path;
+
+  const role = pathname.split('/')[1];
 
   return (
     <>
@@ -35,103 +56,60 @@ export function MainNav() {
           <AppLogo />
         </div>
       </SidebarGroup>
-      <SidebarGroup>
-        <SidebarGroupLabel>Kunde</SidebarGroupLabel>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard')} tooltip="Dashboard">
-              <Link href="/dashboard">
-                <Home />
-                <span>Dashboard</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/pre-order')} tooltip="Vorbestellung">
-              <Link href="/pre-order">
-                <ShoppingBasket />
-                <span>Vorbestellung</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard/loyalty')} tooltip="Treuekarte">
-              <Link href="/dashboard/loyalty">
-                <Heart />
-                <span>Treuekarte</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/dashboard/wheel-of-fortune')} tooltip="Glücksrad">
-              <Link href="/dashboard/wheel-of-fortune">
-                <Star />
-                <span>Glücksrad</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarGroup>
 
-      <SidebarGroup>
-        <SidebarGroupLabel>Mitarbeiter</SidebarGroupLabel>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/employee/scan')} tooltip="QR scannen">
-              <Link href="/employee/scan">
-                <QrCode />
-                <span>QR scannen</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarGroup>
+      {role === 'dashboard' && (
+        <SidebarGroup>
+            <SidebarGroupLabel>Kunde</SidebarGroupLabel>
+            <SidebarMenu>
+                {customerNav.map(item => (
+                    <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
+                            <Link href={item.href}>
+                                <item.icon />
+                                <span>{item.label}</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+        </SidebarGroup>
+      )}
+      
+      {role === 'employee' && (
+        <SidebarGroup>
+            <SidebarGroupLabel>Mitarbeiter</SidebarGroupLabel>
+            <SidebarMenu>
+                 {employeeNav.map(item => (
+                    <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
+                            <Link href={item.href}>
+                                <item.icon />
+                                <span>{item.label}</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+        </SidebarGroup>
+      )}
 
-      <SidebarGroup>
-        <SidebarGroupLabel>Admin</SidebarGroupLabel>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/admin')} tooltip="Statistiken">
-              <Link href="/admin">
-                <BarChart />
-                <span>Statistiken</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/admin/orders')} tooltip="Bestellungen">
-              <Link href="/admin/orders">
-                <Package />
-                <span>Bestellungen</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/admin/products')} tooltip="Produkte">
-              <Link href="/admin/products">
-                <ShoppingBasket />
-                <span>Produkte</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/admin/customers')} tooltip="Kunden">
-              <Link href="/admin/customers">
-                <Users />
-                <span>Kunden</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/admin/seasonal')} tooltip="Marketing">
-              <Link href="/admin/seasonal">
-                <Lightbulb />
-                <span>Marketing</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarGroup>
+      {role === 'admin' && (
+         <SidebarGroup>
+            <SidebarGroupLabel>Admin</SidebarGroupLabel>
+            <SidebarMenu>
+                {adminNav.map(item => (
+                    <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
+                            <Link href={item.href}>
+                                <item.icon />
+                                <span>{item.label}</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+        </SidebarGroup>
+      )}
 
       <SidebarGroup className="mt-auto">
         <SidebarMenu>
