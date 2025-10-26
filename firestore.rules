@@ -1,41 +1,96 @@
+/**
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for private data,
+ *              while allowing public read access to product and category information.
+ *              It leverages denormalization to avoid costly `get()` calls and ensures
+ *              relational integrity where necessary.  Admin roles are checked using
+ *              document existence in the /roles_admin collection.
+ *
+ * @dataStructure
+ * - `/users/{userId}`: Stores user profiles, secured by owner-only access.
+ * - `/categories/{categoryId}`: Stores product categories, publicly readable.
+ * - `/products/{productId}`: Stores product information, publicly readable.
+ * - `/users/{userId}/preOrders/{preOrderId}`: Stores user-specific pre-orders, secured by owner-only access.
+ * - `/appConfig/{appConfigId}`: Stores application configurations.  Write access is not currently defined, defaulting to none.
+ * - `/users/{userId}/notifications/{notificationId}`: Stores user-specific notifications, secured by owner-only access.
+ * - `/users/{userId}/loyaltyCard/{loyaltyCardId}`: Stores user-specific loyalty cards, secured by owner-only access.
+ * - `/roles_admin/{userId}`: Collection used to check admin roles. Document content is irrelevant; only existence matters.
+ *
+ * @keySecurityDecisions
+ * - User data is strictly private and accessible only to the owning user.
+ * - Listing of users is disallowed.
+ * - Product and category data is publicly readable.
+ * - Write access to appConfig is denied by default.
+ * - Admin role is determined by the existence of a document in the /roles_admin collection.
+ *
+ * @denormalizationForAuthorization
+ * - PreOrder documents are stored under `/users/{userId}/preOrders/{preOrderId}` which copies the `userId` from the parent path to simplify ownership checks.
+ *
+ * @structuralSegregation
+ * - Private user data (profile, pre-orders, notifications, loyalty card) is stored under the `/users/{userId}` path, ensuring clear ownership and preventing accidental public exposure.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Manages user profile data, ensuring only the user can read or write their own data.
-     * @path /users/{userId}
-     * @allow (create) - User with UID 'user_abc' can create their profile with matching ID.
-     *          Request: auth.uid == 'user_abc'
-     * @allow (get, list, update, delete) - User with UID 'user_abc' can read, update, and delete their profile.
-     *          Request: auth.uid == 'user_abc'
-     * @deny (create) - User with UID 'user_xyz' cannot create a profile for 'user_abc'.
-     *          Request: auth.uid == 'user_xyz', resource.data.id == 'user_abc'
-     * @deny (update, delete) - User with UID 'user_xyz' cannot update or delete the profile of 'user_abc'.
-     *          Request: auth.uid == 'user_xyz'
-     * @principle Enforces document ownership for all operations.
+     * @description Checks if the request is authenticated.
+     * @returns {boolean} True if the user is signed in, false otherwise.
      */
-    match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false; // Listing all users is not permitted
-
-      allow create: if request.auth.uid == userId && request.resource.data.id == request.auth.uid;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+    function isSignedIn() {
+      return request.auth != null;
     }
 
     /**
-     * @description Manages product categories, allowing public read access.
+     * @description Checks if the authenticated user ID matches the provided user ID.
+     * @param {string} userId - The user ID to compare against the authenticated user's ID.
+     * @returns {boolean} True if the user is signed in and the user IDs match, false otherwise.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the authenticated user ID matches the provided user ID and the resource exists.
+     * @param {string} userId - The user ID to compare against the authenticated user's ID.
+     * @returns {boolean} True if the user is signed in and the user IDs match, false otherwise.
+     */
+    function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Checks if the requesting user has admin privileges.
+     *              This function checks for the existence of a document in the `/roles_admin/{userId}` collection.
+     * @returns {boolean} True if the user has admin privileges, false otherwise.
+     */
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    /**
+     * @description Rules for the /users/{userId} collection.
+     * @path /users/{userId}
+     * @allow (create) - Allow a user to create their own document if the userId matches their auth.uid.
+     * @allow (get, update, delete) - Allow a user to get, update, or delete their own document if the userId matches their auth.uid.
+     * @deny (create) - Deny a user from creating a document with a userId that does not match their auth.uid.
+     * @deny (get, update, delete) - Deny a user from accessing or modifying another user's document.
+     * @principle Enforces document ownership for reads and writes.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Listing users is not permitted.
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id; // Enforce immutability of userId
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for the /categories/{categoryId} collection.
      * @path /categories/{categoryId}
-     * @allow (get, list) - Any user (or no user) can read product categories.
-     *          Request: No authentication required.
-     * @deny (create, update, delete) - No user can create, update, or delete product categories.
-     *          Request: Any user (or admin) attempting to write.
-     * @principle Public read access with restricted writes.
+     * @allow (get, list) - Allow any user to read category data.
+     * @deny (create, update, delete) - Prevent any user from creating, updating, or deleting category data.
+     * @principle Allows public read access to categories.
      */
     match /categories/{categoryId} {
       allow get, list: if true;
@@ -43,13 +98,11 @@ service cloud.firestore {
     }
 
     /**
-     * @description Manages product information, allowing public read access.
+     * @description Rules for the /products/{productId} collection.
      * @path /products/{productId}
-     * @allow (get, list) - Any user can read product information.
-     *          Request: No authentication required.
-     * @deny (create, update, delete) - No user can create, update, or delete product information.
-     *          Request: Any user (or admin) attempting to write.
-     * @principle Public read access with restricted writes.
+     * @allow (get, list) - Allow any user to read product data.
+     * @deny (create, update, delete) - Prevent any user from creating, updating, or deleting product data.
+     * @principle Allows public read access to products.
      */
     match /products/{productId} {
       allow get, list: if true;
@@ -57,89 +110,73 @@ service cloud.firestore {
     }
 
     /**
-     * @description Manages pre-orders for a specific user, ensuring only the user can access their pre-orders.
+     * @description Rules for the /users/{userId}/preOrders/{preOrderId} collection.
      * @path /users/{userId}/preOrders/{preOrderId}
-     * @allow (create, get, list, update, delete) - The user with UID 'user_abc' can create, read, update, and delete their own pre-orders.
-     *          Request: auth.uid == 'user_abc'
-     * @deny (create, get, list, update, delete) - The user with UID 'user_xyz' cannot access pre-orders for 'user_abc'.
-     *          Request: auth.uid == 'user_xyz'
-     * @principle Restricts access to a user's own pre-order data.
+     * @allow (create, get, update, delete) - Allow a user to create, get, update, or delete their own pre-orders.
+     * @deny (create, get, update, delete) - Deny a user from accessing or modifying another user's pre-orders.
+     * @principle Enforces document ownership for pre-orders.
      */
     match /users/{userId}/preOrders/{preOrderId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get, list, create, update, delete: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId; // Enforce immutability of userId
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Manages application-wide configurations, restricting write access.
+     * @description Rules for the /appConfig/{appConfigId} collection.
      * @path /appConfig/{appConfigId}
-     * @allow (get, list) - Any user can read application configurations.
-     *          Request: No authentication required.
-     * @deny (create, update, delete) - No user can create, update, or delete application configurations.
-     *          Request: Any user attempting to write.
-     * @principle Public read access with restricted writes.
+     * @deny (create, get, list, update, delete) - Prevent any user from accessing or modifying app configuration data.
+     * @principle Restricts access to app configuration.
      */
     match /appConfig/{appConfigId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+      allow get, list, create, update, delete: if false;
     }
 
     /**
-     * @description Manages notifications for a specific user, ensuring only the user can access their notifications.
+     * @description Rules for the /users/{userId}/notifications/{notificationId} collection.
      * @path /users/{userId}/notifications/{notificationId}
-     * @allow (create, get, list, update, delete) - The user with UID 'user_abc' can create, read, update, and delete their own notifications.
-     *          Request: auth.uid == 'user_abc'
-     * @deny (create, get, list, update, delete) - The user with UID 'user_xyz' cannot access notifications for 'user_abc'.
-     *          Request: auth.uid == 'user_xyz'
-     * @principle Restricts access to a user's own notification data.
+     * @allow (create, get, update, delete) - Allow a user to create, get, update, or delete their own notifications.
+     * @deny (create, get, update, delete) - Deny a user from accessing or modifying another user's notifications.
+     * @principle Enforces document ownership for notifications.
      */
     match /users/{userId}/notifications/{notificationId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get, list, create, update, delete: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId; // Enforce immutability of userId
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Manages the loyalty card for a specific user, ensuring only the user can access their loyalty card.
+     * @description Rules for the /users/{userId}/loyaltyCard/{loyaltyCardId} collection.
      * @path /users/{userId}/loyaltyCard/{loyaltyCardId}
-     * @allow (create, get, list, update, delete) - The user with UID 'user_abc' can create, read, update, and delete their own loyalty card.
-     *          Request: auth.uid == 'user_abc'
-     * @deny (create, get, list, update, delete) - The user with UID 'user_xyz' cannot access the loyalty card for 'user_abc'.
-     *          Request: auth.uid == 'user_xyz'
-     * @principle Restricts access to a user's own loyalty card data.
+     * @allow (create, get, update, delete) - Allow a user to create, get, update, or delete their own loyalty card.
+     * @deny (create, get, update, delete) - Deny a user from accessing or modifying another user's loyalty card.
      */
     match /users/{userId}/loyaltyCard/{loyaltyCardId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-      allow get, list, create, update, delete: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId; // Enforce immutability of userId
+      allow delete: if isExistingOwner(userId);
     }
 
-    /**
-     * @description Checks for admin roles based on document existence.
-     * @path /roles_admin/{userId}
-     * @allow (get) - Any user can check if an admin role exists.
-     *          Request: No authentication required.
-     * @allow (create) - Only the user being granted admin can create this document.
-     * @deny (update, delete) - No one can update or delete this document.
-     * @principle Restricts admin role creation to the user being granted the role.
-     */
-    match /roles_admin/{userId} {
-        function isOwner(userId) {
-          return request.auth.uid == userId;
+        /**
+         * @description Rules for the /roles_admin/{userId} collection. Only admins can create a document here to grant admin role. The very existence of the document grants admin role.
+         * @path /roles_admin/{userId}
+         * @allow (create) - Allow create by anyone. The cloud function will validate the user, the data and the existence of the document.
+         * @allow (get) - Allow admins to check for the existence of admin users.
+         * @deny (list, update, delete) - Deny non-admins listing, updating, or deleting of admin roles.
+         * @principle Restricts access to app configuration.
+         */
+        match /roles_admin/{userId} {
+            allow get: if isAdmin();
+            allow list: if false;
+            allow create: if isAdmin();
+            allow update: if false;
+            allow delete: if false;
         }
-
-        allow get: if true; // Anyone can check for admin existence.
-        allow list: if false; // Listing all admins is not permitted
-
-        allow create: if isOwner(userId) && request.resource.data.id == request.auth.uid; // Only assign yourself as admin
-        allow update: if false; // no one can change it
-        allow delete: if false; // no one can delete it
-    }
   }
 }

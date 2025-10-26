@@ -3,8 +3,8 @@
   "short_name": "Senoner",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F2F7F2",
-  "theme_color": "#386641",
+  "background_color": "#ffffff",
+  "theme_color": "#10b981",
   "icons": [
     {
       "src": "/icon.png",

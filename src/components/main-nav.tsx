@@ -98,27 +98,35 @@ export function MainNav() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive('/admin/marketing')} tooltip="Marketing">
-              <Link href="/admin/marketing">
-                <Lightbulb />
-                <span>Marketing</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild disabled tooltip="Bestellungen">
-              <Link href="#">
+           <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive('/admin/orders')} tooltip="Bestellungen">
+              <Link href="/admin/orders">
                 <Package />
                 <span>Bestellungen</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild disabled tooltip="Benutzer">
-              <Link href="#">
+            <SidebarMenuButton asChild isActive={isActive('/admin/products')} tooltip="Produkte">
+              <Link href="/admin/products">
+                <ShoppingBasket />
+                <span>Produkte</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive('/admin/customers')} tooltip="Kunden">
+              <Link href="/admin/customers">
                 <Users />
-                <span>Benutzer</span>
+                <span>Kunden</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive('/admin/seasonal')} tooltip="Marketing">
+              <Link href="/admin/seasonal">
+                <Lightbulb />
+                <span>Marketing</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -128,8 +136,8 @@ export function MainNav() {
       <SidebarGroup className="mt-auto">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild disabled tooltip="Einstellungen">
-              <Link href="#">
+            <SidebarMenuButton asChild isActive={isActive('/dashboard/profile')} tooltip="Einstellungen">
+              <Link href="/dashboard/profile">
                 <Settings />
                 <span>Einstellungen</span>
               </Link>

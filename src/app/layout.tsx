@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'Senoner Sarteur Digital',
+  title: 'My Senoner Sarteur',
   description: 'Kundenbindungs-App für Senoner Supermarkt',
   manifest: '/manifest.json',
 };
@@ -25,7 +25,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={cn('font-body antialiased')}>
+      <body className={cn('font-sans antialiased')}>
         <FirebaseClientProvider>
           {children}
           <Toaster />
