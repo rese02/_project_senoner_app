@@ -1,3 +1,46 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "user-avatar-1",
+      "description": "A placeholder for a user avatar",
+      "imageUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjE0Mzg3NjJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "qr-code",
+      "description": "A placeholder for a QR code",
+      "imageUrl": "https://images.unsplash.com/photo-1626682561113-d1db402cc866?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxxciUyMGNvZGV8ZW58MHx8fHwxNzYxMzk3MjM1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "qr code"
+    },
+    {
+      "id": "product-bread",
+      "description": "A placeholder image of bread",
+      "imageUrl": "https://images.unsplash.com/photo-1627308593341-d886acdc06a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8YXJ0aXNhbiUyMGJyZWFkfGVufDB8fHx8MTc2MTQxNjQ1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "artisan bread"
+    },
+    {
+      "id": "product-cake",
+      "description": "A placeholder image of a cake",
+      "imageUrl": "https://images.unsplash.com/photo-1517427294546-5aa121f68e8a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjaG9jb2xhdGUlMjBjYWtlfGVufDB8fHx8MTc2MTQ4Njg5MHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "chocolate cake"
+    },
+    {
+      "id": "product-pastry",
+      "description": "A placeholder image of a pastry",
+      "imageUrl": "https://images.unsplash.com/photo-1724879703317-a2686a97f767?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxjcm9pc3NhbnQlMjBwYXN0cnl8ZW58MHx8fHwxNzYxMzkwOTcyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "croissant pastry"
+    },
+    {
+      "id": "product-cookies",
+      "description": "A placeholder image of cookies",
+      "imageUrl": "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjaG9jb2xhdGUlMjBjb29raWVzfGVufDB8fHx8MTc2MTQ2OTQ2NXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "chocolate cookies"
+    },
+    {
+      "id": "wheel-of-fortune",
+      "description": "A placeholder image for the wheel of fortune",
+      "imageUrl": "https://images.unsplash.com/photo-1575793860966-13cf96c003d5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjb2xvcmZ1bCUyMHdoZWVsfGVufDB8fHx8MTc2MTQ4OTAzMnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "colorful wheel"
+    }
+  ]
 }
