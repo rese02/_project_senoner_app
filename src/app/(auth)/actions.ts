@@ -11,6 +11,8 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
+// This file uses the CLIENT-SIDE SDK for auth actions, which is correct.
+// The server-side admin logic is handled in API routes.
 const { firestore, auth } = initializeFirebase();
 
 const loginSchema = z.object({
@@ -64,13 +66,15 @@ export async function handleLogin(prevState: any, formData: FormData) {
         return { message: 'Sitzung konnte nicht erstellt werden.' };
     }
 
-    let targetUrl = '/dashboard';
-    if (role === 'admin') {
-      targetUrl = '/admin';
-    } else if (role === 'employee') {
-      targetUrl = '/employee/scan';
-    }
+    const REDIRECTS: { [key: string]: string } = {
+        admin: '/admin',
+        employee: '/employee/scan',
+        customer: '/dashboard',
+    };
+    
+    const targetUrl = REDIRECTS[role] || '/dashboard';
     return { success: true, redirectUrl: targetUrl };
+    
   } catch (e) {
     const error = e as AuthError;
     let message = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.';

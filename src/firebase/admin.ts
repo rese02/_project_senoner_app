@@ -1,14 +1,20 @@
 import admin from 'firebase-admin';
 
-// WICHTIG: Stellen Sie sicher, dass Sie eine service-account.json-Datei im Stammverzeichnis Ihres Projekts haben
-// und dass die Umgebungsvariable GOOGLE_APPLICATION_CREDENTIALS in Ihrer Entwicklungsumgebung
-// (z. B. in .env.local) auf './service-account.json' gesetzt ist.
-// Für die Produktion (z.B. Vercel, Firebase Hosting) müssen Sie die Dienstkontoschlüssel
-// sicher als Umgebungsvariablen speichern.
+// WICHTIG: Stellen Sie sicher, dass die Umgebungsvariable FIREBASE_SERVICE_ACCOUNT_KEY
+// in Ihrer .env.local gesetzt ist und den JSON-Inhalt Ihres Service-Account-Schlüssels enthält.
 
-const serviceAccount = JSON.parse(
-  process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string
-);
+function getServiceAccount() {
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (!serviceAccountJson) {
+        throw new Error('Die Umgebungsvariable FIREBASE_SERVICE_ACCOUNT_KEY wurde nicht gefunden.');
+    }
+    try {
+        return JSON.parse(serviceAccountJson);
+    } catch (e) {
+        throw new Error('Fehler beim Parsen des FIREBASE_SERVICE_ACCOUNT_KEY. Stellen Sie sicher, dass es sich um ein gültiges JSON handelt.');
+    }
+}
+
 
 export function getAdminApp() {
   if (admin.apps.length > 0) {
@@ -16,7 +22,7 @@ export function getAdminApp() {
   }
 
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+    credential: admin.credential.cert(getServiceAccount()),
   });
 
   return admin.app();
