@@ -7,7 +7,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
 // HINWEIS: Dieser Code läuft auf dem Server.
@@ -43,26 +43,6 @@ interface RegisterState {
   redirectUrl?: string;
 }
 
-/**
- * Holt die Rolle eines Benutzers aus seinem Firestore-Dokument.
- * @param uid Die User ID des Benutzers.
- * @returns Die Rolle des Benutzers als String ('admin', 'employee', 'customer')
- */
-async function getUserRole(uid: string): Promise<string> {
-  try {
-    const userDocRef = doc(firestore, 'users', uid);
-    const userDoc = await getDoc(userDocRef);
-    if (userDoc.exists()) {
-      return userDoc.data()?.role || 'customer';
-    }
-    // Fallback, falls das Dokument aus irgendeinem Grund nicht existiert.
-    return 'customer';
-  } catch (error) {
-    console.error('Error fetching user role:', error);
-    // Sicherer Standardwert
-    return 'customer';
-  }
-}
 
 export async function handleLogin(prevState: any, formData: FormData): Promise<LoginState> {
   const validatedFields = loginSchema.safeParse(Object.fromEntries(formData.entries()));
@@ -77,22 +57,10 @@ export async function handleLogin(prevState: any, formData: FormData): Promise<L
 
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-
-    // Rolle aus Firestore holen
-    const role = await getUserRole(user.uid);
-
-    // Weiterleitungs-URL basierend auf der Rolle bestimmen
-    let redirectUrl = '/dashboard';
-    if (role === 'admin') {
-      redirectUrl = '/admin';
-    } else if (role === 'employee') {
-      redirectUrl = '/employee/scan';
-    }
-    
     const idToken = await userCredential.user.getIdToken();
 
-    // Die API-Route kümmert sich um das Setzen des sicheren Session-Cookies
+    // Die API-Route kümmert sich um das Setzen des sicheren Session-Cookies,
+    // das Auslesen der Rolle, das Setzen von Custom Claims und gibt die Weiterleitungs-URL zurück.
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -103,6 +71,8 @@ export async function handleLogin(prevState: any, formData: FormData): Promise<L
         const errorData = await response.json();
         return { success: false, message: errorData.error || 'Sitzung konnte nicht erstellt werden.' };
     }
+    
+    const { redirectUrl } = await response.json();
 
     return { success: true, redirectUrl };
   } catch (e) {
@@ -168,8 +138,8 @@ export async function handleRegister(prevState: any, formData: FormData): Promis
         return { success: true, redirectUrl: '/login?registration=success_no_session' };
     }
     
-    // Direkt zum Kunden-Dashboard weiterleiten, da die Rolle immer 'customer' ist
-    return { success: true, redirectUrl: '/dashboard' };
+    const { redirectUrl } = await response.json();
+    return { success: true, redirectUrl };
 
   } catch (e) {
     const error = e as AuthError;
