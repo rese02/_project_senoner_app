@@ -17,7 +17,7 @@ const { firestore, auth } = initializeFirebase();
 
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(1),
+  password: z.string().min(1, "Password is required."),
 });
 
 const registerSchema = z.object({
@@ -144,8 +144,12 @@ export async function handleRegister(prevState: any, formData: FormData) {
 }
 
 export async function handleLogout() {
+  try {
     await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/logout`, {
         method: 'POST',
     });
-    redirect('/login');
+  } catch (error) {
+    console.error("Logout failed:", error);
+  }
+  redirect('/login');
 }

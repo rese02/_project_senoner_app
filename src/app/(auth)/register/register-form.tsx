@@ -63,7 +63,7 @@ export function RegisterForm() {
           id="password"
           name="password"
           type="password"
-          placeholder="••••••••"
+          placeholder="Mindestens 6 Zeichen"
           required
           minLength={6}
         />
