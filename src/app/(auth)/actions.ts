@@ -1,18 +1,15 @@
 'use server';
 
 import { z } from 'zod';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import {
   AuthError,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
-// This file uses the CLIENT-SIDE SDK for auth actions, which is correct.
-// The server-side admin logic is handled in API routes.
 const { firestore, auth } = initializeFirebase();
 
 const loginSchema = z.object({
@@ -25,20 +22,6 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6, "Password must be at least 6 characters."),
 });
-
-async function getUserRole(uid: string): Promise<string> {
-  try {
-    const userDocRef = doc(firestore, 'users', uid);
-    const userDoc = await getDoc(userDocRef);
-    if (userDoc.exists()) {
-      return userDoc.data()?.role || 'customer';
-    }
-    return 'customer';
-  } catch (error) {
-    console.error('Error fetching user role:', error);
-    return 'customer';
-  }
-}
 
 export async function handleLogin(prevState: any, formData: FormData) {
   const validatedFields = loginSchema.safeParse(Object.fromEntries(formData.entries()));
@@ -53,9 +36,8 @@ export async function handleLogin(prevState: any, formData: FormData) {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const idToken = await userCredential.user.getIdToken();
-    const role = await getUserRole(userCredential.user.uid);
 
-    // Call the API route to set the session cookie
+    // The API route now handles getting the role and returning the correct redirect URL.
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,17 +45,17 @@ export async function handleLogin(prevState: any, formData: FormData) {
     });
 
     if (!response.ok) {
-        return { message: 'Sitzung konnte nicht erstellt werden.' };
+        const errorData = await response.json();
+        return { message: errorData.error || 'Sitzung konnte nicht erstellt werden.' };
     }
-
-    const REDIRECTS: { [key: string]: string } = {
-        admin: '/admin',
-        employee: '/employee/scan',
-        customer: '/dashboard',
-    };
     
-    const targetUrl = REDIRECTS[role] || '/dashboard';
-    return { success: true, redirectUrl: targetUrl };
+    const sessionData = await response.json();
+
+    if (sessionData.success && sessionData.redirectUrl) {
+        return { success: true, redirectUrl: sessionData.redirectUrl };
+    }
+    
+    return { message: 'Anmeldung fehlgeschlagen: Keine Weiterleitungs-URL erhalten.'};
     
   } catch (e) {
     const error = e as AuthError;
@@ -109,14 +91,12 @@ export async function handleRegister(prevState: any, formData: FormData) {
     const [firstName, ...lastNameParts] = name.split(' ');
     const lastName = lastNameParts.join(' ');
 
-    // This operation will succeed because of the corrected Firestore security rules
-    // which allow a user to create their own document upon registration.
     await setDoc(doc(firestore, 'users', user.uid), {
       id: user.uid,
       firstName: firstName || '',
       lastName: lastName || '',
       email: user.email,
-      role: 'customer', // Default role for every new user
+      role: 'customer',
       points: 0,
       rewards: [],
       coupons: [],
@@ -124,7 +104,6 @@ export async function handleRegister(prevState: any, formData: FormData) {
 
     const idToken = await user.getIdToken();
 
-     // Call the API route to set the session cookie
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,11 +111,14 @@ export async function handleRegister(prevState: any, formData: FormData) {
     });
 
     if (!response.ok) {
-        // Even if session fails, user is created. They can log in.
-        return { success: true, redirectUrl: '/login?registration=success' };
+        return { success: true, redirectUrl: '/login?registration=success_no_session' };
+    }
+    
+    const sessionData = await response.json();
+    if (sessionData.success && sessionData.redirectUrl) {
+         return { success: true, redirectUrl: sessionData.redirectUrl };
     }
 
-    // Redirect to the customer dashboard after successful registration and login
     return { success: true, redirectUrl: '/dashboard' };
 
   } catch (e) {
@@ -145,20 +127,20 @@ export async function handleRegister(prevState: any, formData: FormData) {
     if (error.code === 'auth/email-already-in-use') {
       message = 'Diese E-Mail-Adresse wird bereits verwendet.';
     }
-    // For debugging on the server
     console.error('Registration Error:', error.code, error.message);
     return { message };
   }
 }
 
-
 export async function handleLogout() {
-  try {
-    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/logout`, {
-        method: 'POST',
-    });
-  } catch (error) {
-    console.error("Logout failed:", error);
-  }
-  redirect('/login');
+    // This is now a simple server action that redirects after calling the API route.
+    // The actual cookie clearing is done in the API route.
+    try {
+        await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/logout`, {
+            method: 'POST',
+        });
+    } catch (error) {
+        console.error("Logout fetch failed:", error);
+    }
+    redirect('/login');
 }
