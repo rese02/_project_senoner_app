@@ -11,8 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 
 const initialState = {
-  message: '',
   success: false,
+  message: '',
   redirectUrl: '',
 };
 
@@ -31,19 +31,19 @@ export function LoginForm() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state.message && !state.success) {
-      toast({
-        variant: 'destructive',
-        title: 'Fehler bei der Anmeldung',
-        description: state.message,
-      });
-    }
     if (state.success && state.redirectUrl) {
       toast({
         title: 'Anmeldung erfolgreich',
         description: 'Willkommen zurück!',
       });
+      // Sicherer Redirect mit Next.js Router
       router.push(state.redirectUrl);
+    } else if (state.message) {
+      toast({
+        variant: 'destructive',
+        title: 'Fehler bei der Anmeldung',
+        description: state.message,
+      });
     }
   }, [state, router, toast]);
 

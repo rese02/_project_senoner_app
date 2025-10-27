@@ -11,8 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 
 const initialState = {
-  message: '',
   success: false,
+  message: '',
+  errors: {},
   redirectUrl: '',
 };
 
@@ -31,19 +32,18 @@ export function RegisterForm() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state.message && !state.success) {
+    if (state.success && state.redirectUrl) {
+      toast({
+        title: 'Registrierung erfolgreich!',
+        description: 'Ihr Konto wurde erstellt. Sie werden weitergeleitet...',
+      });
+      router.push(state.redirectUrl);
+    } else if (state.message) {
       toast({
         variant: 'destructive',
         title: 'Fehler bei der Registrierung',
         description: state.message,
       });
-    }
-    if (state.success && state.redirectUrl) {
-      toast({
-        title: 'Registrierung erfolgreich',
-        description: 'Ihr Konto wurde erstellt. Sie werden weitergeleitet.',
-      });
-      router.push(state.redirectUrl);
     }
   }, [state, router, toast]);
 

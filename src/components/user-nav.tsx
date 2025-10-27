@@ -55,9 +55,9 @@ export function UserNav() {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
          <form action={handleLogout}>
-            <Button type="submit" variant="ghost" className="w-full justify-start font-normal px-2">
-                Abmelden
-            </Button>
+            <DropdownMenuItem asChild>
+              <button type="submit" className="w-full text-left">Abmelden</button>
+            </DropdownMenuItem>
         </form>
       </DropdownMenuContent>
     </DropdownMenu>
