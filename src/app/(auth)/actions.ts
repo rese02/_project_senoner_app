@@ -4,15 +4,14 @@ import { z } from 'zod';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import {
-  getAuth,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   AuthError,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
-const { firestore } = initializeFirebase();
+const { firestore, auth } = initializeFirebase();
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -50,29 +49,36 @@ export async function handleLogin(prevState: any, formData: FormData) {
   const { email, password } = validatedFields.data;
 
   try {
-    const { auth } = initializeFirebase();
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-    const role = await getUserRole(user.uid);
+    const idToken = await userCredential.user.getIdToken();
+    const role = await getUserRole(userCredential.user.uid);
 
-    cookies().set(
-      'session',
-      JSON.stringify({ uid: user.uid, role, email: user.email, name: user.displayName }),
-      { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 }
-    );
-    
+    // Call the API route to set the session cookie
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+    });
+
+    if (!response.ok) {
+        return { message: 'Sitzung konnte nicht erstellt werden.' };
+    }
+
     let targetUrl = '/dashboard';
     if (role === 'admin') {
-        targetUrl = '/admin';
+      targetUrl = '/admin';
     } else if (role === 'employee') {
-        targetUrl = '/employee/scan';
+      targetUrl = '/employee/scan';
     }
     return { success: true, redirectUrl: targetUrl };
-
   } catch (e) {
     const error = e as AuthError;
     let message = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.';
-    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+    if (
+      error.code === 'auth/user-not-found' ||
+      error.code === 'auth/wrong-password' ||
+      error.code === 'auth/invalid-credential'
+    ) {
       message = 'Ungültige E-Mail-Adresse oder falsches Passwort.';
     }
     return {
@@ -80,7 +86,6 @@ export async function handleLogin(prevState: any, formData: FormData) {
     };
   }
 }
-
 
 export async function handleRegister(prevState: any, formData: FormData) {
   const validatedFields = registerSchema.safeParse(Object.fromEntries(formData.entries()));
@@ -93,43 +98,50 @@ export async function handleRegister(prevState: any, formData: FormData) {
   const { name, email, password } = validatedFields.data;
 
   try {
-    const { auth, firestore } = initializeFirebase();
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
     const [firstName, ...lastNameParts] = name.split(' ');
     const lastName = lastNameParts.join(' ');
-    
-    await setDoc(doc(firestore, "users", user.uid), {
-        id: user.uid,
-        firstName: firstName || '',
-        lastName: lastName || '',
-        email: user.email,
-        role: "customer",
-        points: 0,
-        rewards: [],
-        coupons: [],
+
+    await setDoc(doc(firestore, 'users', user.uid), {
+      id: user.uid,
+      firstName: firstName || '',
+      lastName: lastName || '',
+      email: user.email,
+      role: 'customer',
+      points: 0,
+      rewards: [],
+      coupons: [],
     });
 
-    const role = 'customer';
-    cookies().set(
-        'session',
-        JSON.stringify({ uid: user.uid, role, email: user.email, name }),
-        { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 }
-    );
-     return { success: true, redirectUrl: '/dashboard' };
+    const idToken = await user.getIdToken();
+
+     // Call the API route to set the session cookie
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+    });
+
+    if (!response.ok) {
+        return { message: 'Sitzung konnte nicht erstellt werden.' };
+    }
+
+    return { success: true, redirectUrl: '/dashboard' };
   } catch (e) {
     const error = e as AuthError;
-     let message = 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.';
+    let message = 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.';
     if (error.code === 'auth/email-already-in-use') {
-        message = 'Diese E-Mail-Adresse wird bereits verwendet.';
+      message = 'Diese E-Mail-Adresse wird bereits verwendet.';
     }
     return { message };
   }
 }
 
-
 export async function handleLogout() {
-    cookies().delete('session');
+    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/logout`, {
+        method: 'POST',
+    });
     redirect('/login');
 }
