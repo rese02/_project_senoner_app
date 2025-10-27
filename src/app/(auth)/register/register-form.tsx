@@ -37,7 +37,9 @@ export function RegisterForm() {
         title: 'Registrierung erfolgreich!',
         description: 'Ihr Konto wurde erstellt. Sie werden weitergeleitet...',
       });
-      router.push(state.redirectUrl);
+      // Wichtig: window.location.reload() erzwingt ein Neuladen der Seite.
+      // Dadurch wird sichergestellt, dass die Middleware den neuen Session-Cookie korrekt auswertet.
+      window.location.href = state.redirectUrl;
     } else if (state.message) {
       toast({
         variant: 'destructive',

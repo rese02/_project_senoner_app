@@ -36,9 +36,10 @@ export function LoginForm() {
         title: 'Anmeldung erfolgreich',
         description: 'Willkommen zurück!',
       });
-      // Sicherer Redirect mit Next.js Router
-      router.push(state.redirectUrl);
-    } else if (state.message) {
+      // Wichtig: window.location.reload() erzwingt ein Neuladen der Seite.
+      // Dadurch wird sichergestellt, dass die Middleware den neuen Session-Cookie korrekt auswertet.
+      window.location.href = state.redirectUrl;
+    } else if (!state.success && state.message) {
       toast({
         variant: 'destructive',
         title: 'Fehler bei der Anmeldung',
