@@ -132,7 +132,8 @@ export async function handleRegister(prevState: any, formData: FormData) {
     });
 
     if (!response.ok) {
-        return { message: 'Konto erstellt, aber Sitzung konnte nicht erstellt werden.' };
+        // Even if session fails, user is created. They can log in.
+        return { success: true, redirectUrl: '/login?registration=success' };
     }
 
     // Redirect to the customer dashboard after successful registration and login

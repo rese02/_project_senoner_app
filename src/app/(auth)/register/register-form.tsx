@@ -41,7 +41,7 @@ export function RegisterForm() {
     if (state.success && state.redirectUrl) {
       toast({
         title: 'Registrierung erfolgreich',
-        description: 'Ihr Konto wurde erstellt. Willkommen!',
+        description: 'Ihr Konto wurde erstellt. Sie werden weitergeleitet.',
       });
       router.push(state.redirectUrl);
     }
