@@ -21,9 +21,9 @@ const loginSchema = z.object({
 });
 
 const registerSchema = z.object({
-  name: z.string().min(2),
+  name: z.string().min(2, "Name is required."),
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().min(6, "Password must be at least 6 characters."),
 });
 
 async function getUserRole(uid: string): Promise<string> {
@@ -97,6 +97,7 @@ export async function handleRegister(prevState: any, formData: FormData) {
   if (!validatedFields.success) {
     return {
       message: 'Ungültige Eingabe.',
+      errors: validatedFields.error.flatten().fieldErrors,
     };
   }
   const { name, email, password } = validatedFields.data;
@@ -108,12 +109,14 @@ export async function handleRegister(prevState: any, formData: FormData) {
     const [firstName, ...lastNameParts] = name.split(' ');
     const lastName = lastNameParts.join(' ');
 
+    // This operation will succeed because of the corrected Firestore security rules
+    // which allow a user to create their own document upon registration.
     await setDoc(doc(firestore, 'users', user.uid), {
       id: user.uid,
       firstName: firstName || '',
       lastName: lastName || '',
       email: user.email,
-      role: 'customer',
+      role: 'customer', // Default role for every new user
       points: 0,
       rewards: [],
       coupons: [],
@@ -129,19 +132,24 @@ export async function handleRegister(prevState: any, formData: FormData) {
     });
 
     if (!response.ok) {
-        return { message: 'Sitzung konnte nicht erstellt werden.' };
+        return { message: 'Konto erstellt, aber Sitzung konnte nicht erstellt werden.' };
     }
 
+    // Redirect to the customer dashboard after successful registration and login
     return { success: true, redirectUrl: '/dashboard' };
+
   } catch (e) {
     const error = e as AuthError;
     let message = 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.';
     if (error.code === 'auth/email-already-in-use') {
       message = 'Diese E-Mail-Adresse wird bereits verwendet.';
     }
+    // For debugging on the server
+    console.error('Registration Error:', error.code, error.message);
     return { message };
   }
 }
+
 
 export async function handleLogout() {
   try {
