@@ -66,7 +66,22 @@ export default function ScanPage() {
 
   const handleCloseDialog = () => {
     setScanResult(null);
-    controlsRef.current?.start(); // Resume scanning
+    // Only attempt to restart scanning if we have active controls
+    if (videoRef.current && controlsRef.current) {
+        const codeReader = new BrowserQRCodeReader();
+        codeReader.decodeFromVideoElement(videoRef.current, (result, error, controls) => {
+             if (result) {
+              setScanResult(result.getText());
+              controls.stop();
+            }
+        }).then(newControls => {
+            controlsRef.current = newControls;
+        }).catch(err => {
+            if (err.name !== 'NotFoundException') {
+                console.error("Could not restart scanner:", err);
+            }
+        });
+    }
   };
   
   const handleAwardStamp = () => {

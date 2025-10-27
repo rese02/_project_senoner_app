@@ -39,7 +39,8 @@ export default function LoyaltyPage() {
                   <Image
                     src={qrCodeImage.imageUrl}
                     alt={qrCodeImage.description}
-                    layout="fill"
+                    width={192}
+                    height={192}
                     className="rounded-lg object-cover"
                     data-ai-hint={qrCodeImage.imageHint}
                   />

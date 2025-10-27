@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/sidebar';
 import { AppLogo } from './app-logo';
 import { useMemo } from 'react';
+import { useUser } from '@/firebase';
+
 
 const navConfig = {
   customer: [
@@ -39,40 +41,33 @@ const navConfig = {
       { href: '/admin/orders', label: 'Bestellungen', icon: Package },
       { href: '/admin/products', label: 'Produkte', icon: ShoppingBasket },
       { href: '/admin/customers', label: 'Kunden', icon: Users },
-      { href: '/admin/seasonal', label: 'Marketing', icon: Lightbulb },
+      { href: '/admin/marketing', label: 'Marketing', icon: Lightbulb },
   ],
 };
 
-const roleLabels = {
+const roleLabels: { [key: string]: string } = {
   dashboard: 'Kunde',
-  pre_order: 'Kunde',
+  'pre-order': 'Kunde',
   admin: 'Admin',
   employee: 'Mitarbeiter'
-} as const;
-
-type Role = keyof typeof roleLabels;
+};
 
 
 export function MainNav() {
   const pathname = usePathname();
   const isActive = (path: string) => pathname === path;
 
+  // This is a temporary solution to determine the role based on the URL.
+  // In a real app, this would come from the user's session.
   const role = useMemo(() => {
     const segment = pathname.split('/')[1];
-    if (segment in roleLabels) {
-      // Special case for pre-order which belongs to customer dashboard
-      if (segment === 'pre-order') return 'customer';
-      
-      const roleKey = roleLabels[segment as Role];
-      if (roleKey === 'Kunde') return 'customer';
-      if (roleKey === 'Admin') return 'admin';
-      if (roleKey === 'Mitarbeiter') return 'employee';
-    }
-    return 'customer'; // Default role
+    if (segment === 'admin') return 'admin';
+    if (segment === 'employee') return 'employee';
+    return 'customer';
   }, [pathname]);
 
-  const navItems = navConfig[role] || [];
-  const roleLabel = roleLabels[pathname.split('/')[1] as Role] || 'Kunde';
+  const navItems = navConfig[role as keyof typeof navConfig] || [];
+  const roleLabel = roleLabels[role] || 'Menü';
 
   return (
     <>

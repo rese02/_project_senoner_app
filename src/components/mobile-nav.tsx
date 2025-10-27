@@ -24,6 +24,7 @@ const navConfig = {
   ],
   employee: [
       { href: '/employee/scan', label: 'Scannen', icon: QrCode },
+      // Add more employee items if needed, up to 3
   ],
   admin: [
       { href: '/admin', label: 'Home', icon: BarChart },
@@ -44,7 +45,7 @@ export function MobileNav() {
     return 'customer';
   }, [pathname]);
 
-  const navItems = navConfig[role];
+  const navItems = navConfig[role as keyof typeof navConfig];
 
   const renderNavItem = (item: { href: string; label: string; icon: React.ElementType }) => {
     const isActive = pathname === item.href;
@@ -74,7 +75,7 @@ export function MobileNav() {
                     <span className="text-xs">Mehr</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="mb-2">
+            <DropdownMenuContent align="end" className="mb-2 w-56">
                  <DropdownMenuLabel>Kundenbereich</DropdownMenuLabel>
                 <DropdownMenuGroup>
                     <DropdownMenuItem asChild><Link href="/dashboard/profile"><Settings className="mr-2"/>Profil</Link></DropdownMenuItem>
@@ -83,8 +84,9 @@ export function MobileNav() {
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Andere Bereiche</DropdownMenuLabel>
                 <DropdownMenuGroup>
-                    <DropdownMenuItem asChild><Link href="/admin"><BarChart className="mr-2"/>Admin</Link></DropdownMenuItem>
-                    <DropdownMenuItem asChild><Link href="/employee/scan"><QrCode className="mr-2"/>Mitarbeiter</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="/admin"><BarChart className="mr-2"/>Admin Dashboard</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="/admin/marketing"><Lightbulb className="mr-2"/>Marketing</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="/employee/scan"><QrCode className="mr-2"/>Mitarbeiter-Scan</Link></DropdownMenuItem>
                 </DropdownMenuGroup>
             </DropdownMenuContent>
         </DropdownMenu>
