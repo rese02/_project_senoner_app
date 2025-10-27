@@ -14,7 +14,7 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
-import { useMemo } from 'react';
+import { useUser } from '@/firebase';
 
 const navConfig = {
   customer: [
@@ -36,16 +36,9 @@ const navConfig = {
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { role } = useUser();
 
-  const role = useMemo(() => {
-    const segment = pathname.split('/')[1];
-    if (segment === 'admin') return 'admin';
-    if (segment === 'employee') return 'employee';
-    // Default to customer for /dashboard, /pre-order, etc.
-    return 'customer';
-  }, [pathname]);
-
-  const navItems = navConfig[role as keyof typeof navConfig];
+  const navItems = role ? navConfig[role as keyof typeof navConfig] : navConfig.customer;
 
   const renderNavItem = (item: { href: string; label: string; icon: React.ElementType }) => {
     const isActive = pathname === item.href;

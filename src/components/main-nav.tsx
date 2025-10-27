@@ -22,7 +22,6 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
 import { AppLogo } from './app-logo';
-import { useMemo } from 'react';
 import { useUser } from '@/firebase';
 
 
@@ -46,8 +45,7 @@ const navConfig = {
 };
 
 const roleLabels: { [key: string]: string } = {
-  dashboard: 'Kunde',
-  'pre-order': 'Kunde',
+  customer: 'Kunde',
   admin: 'Admin',
   employee: 'Mitarbeiter'
 };
@@ -55,19 +53,11 @@ const roleLabels: { [key: string]: string } = {
 
 export function MainNav() {
   const pathname = usePathname();
+  const { role } = useUser();
   const isActive = (path: string) => pathname === path;
 
-  // This is a temporary solution to determine the role based on the URL.
-  // In a real app, this would come from the user's session.
-  const role = useMemo(() => {
-    const segment = pathname.split('/')[1];
-    if (segment === 'admin') return 'admin';
-    if (segment === 'employee') return 'employee';
-    return 'customer';
-  }, [pathname]);
-
-  const navItems = navConfig[role as keyof typeof navConfig] || [];
-  const roleLabel = roleLabels[role] || 'Menü';
+  const navItems = role ? navConfig[role as keyof typeof navConfig] : [];
+  const roleLabel = role ? roleLabels[role as keyof typeof roleLabels] : 'Menü';
 
   return (
     <>
