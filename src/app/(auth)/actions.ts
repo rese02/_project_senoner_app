@@ -84,7 +84,7 @@ export async function handleLogin(prevState: any, formData: FormData): Promise<L
       error.code === 'auth/wrong-password' ||
       error.code === 'auth/invalid-credential'
     ) {
-      message = 'Ungültige E-Mail-Adresse oder falsches Passwort.';
+      message = 'Ungültige E--Mail-Adresse oder falsches Passwort.';
     }
     console.error('Login Error:', error.code, error.message);
     return {
@@ -135,7 +135,7 @@ export async function handleRegister(prevState: any, formData: FormData): Promis
 
     if (!response.ok) {
         // Dieser Fall ist unwahrscheinlich, aber wichtig für die Robustheit
-        return { success: true, redirectUrl: '/login?registration=success_no_session' };
+        return { success: true, message: "Konto erstellt, aber Sitzung konnte nicht erstellt werden.", redirectUrl: '/login?registration=success_no_session' };
     }
     
     const { redirectUrl } = await response.json();

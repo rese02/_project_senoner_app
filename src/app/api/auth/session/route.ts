@@ -17,6 +17,7 @@ async function getUserRole(uid: string): Promise<string> {
     if (userDoc.exists) {
       return userDoc.data()?.role || 'customer';
     }
+    console.warn(`User document for ${uid} not found in Firestore. Defaulting to 'customer' role.`);
     return 'customer';
   } catch (error) {
     console.error('Error fetching user role from Firestore:', error);

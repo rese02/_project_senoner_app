@@ -44,6 +44,9 @@ export function RegisterForm() {
         title: 'Fehler bei der Registrierung',
         description: state.message,
       });
+       if(state.redirectUrl) {
+         router.push(state.redirectUrl);
+       }
     }
   }, [state, router, toast]);
 
