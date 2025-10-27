@@ -1,6 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getAdminApp } from './firebase/admin';
-import { auth } from 'firebase-admin';
 
 const PROTECTED_ROUTES = ['/dashboard', '/pre-order', '/admin', '/employee'];
 const PUBLIC_ROUTES = ['/login', '/register'];
@@ -11,6 +9,8 @@ const REDIRECTS: { [key: string]: string } = {
   customer: '/dashboard',
 };
 
+// This middleware is now much simpler and only runs on the Edge.
+// It delegates the complex token verification to a Node.js-based API route.
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session')?.value;
@@ -18,36 +18,55 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
   const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
 
+  // If no session cookie and trying to access a protected route, redirect to login
   if (!sessionCookie && isProtectedRoute) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
+  // If there is a session cookie, we need to verify it.
   if (sessionCookie) {
     try {
-      getAdminApp(); // Ensure admin app is initialized
-      const decodedToken = await auth().verifySessionCookie(sessionCookie, true);
-      const role = (decodedToken.role as string) || 'customer';
+      // The verification is now handled by an API route that runs in the Node.js runtime.
+      const response = await fetch(`${request.nextUrl.origin}/api/auth/verify`, {
+        headers: {
+          Cookie: `session=${sessionCookie}`,
+        },
+      });
 
+      // If verification fails, redirect to login and clear the invalid cookie.
+      if (!response.ok) {
+        const loginUrl = new URL('/login', request.url);
+        const redirectResponse = NextResponse.redirect(loginUrl);
+        redirectResponse.cookies.delete('session');
+        return redirectResponse;
+      }
+      
+      const { role } = await response.json();
+
+      // If user is authenticated and tries to access a public route (login/register),
+      // redirect them to their respective dashboard.
       if (isPublicRoute) {
-        const targetUrl = REDIRECTS[role] || '/dashboard';
+        const targetUrl = REDIRECTS[role as keyof typeof REDIRECTS] || '/dashboard';
         return NextResponse.redirect(new URL(targetUrl, request.url));
       }
 
+      // Enforce role-based access to protected routes
       if (pathname.startsWith('/admin') && role !== 'admin') {
-         const userDashboard = REDIRECTS[role] || '/dashboard';
+         const userDashboard = REDIRECTS[role as keyof typeof REDIRECTS] || '/dashboard';
          return NextResponse.redirect(new URL(userDashboard, request.url));
       }
       if (pathname.startsWith('/employee') && role !== 'employee') {
-         const userDashboard = REDIRECTS[role] || '/dashboard';
+         const userDashboard = REDIRECTS[role as keyof typeof REDIRECTS] || '/dashboard';
          return NextResponse.redirect(new URL(userDashboard, request.url));
       }
       if ((pathname.startsWith('/dashboard') || pathname.startsWith('/pre-order')) && role !== 'customer') {
-         const userDashboard = REDIRECTS[role] || '/dashboard';
+         const userDashboard = REDIRECTS[role as keyof typeof REDIRECTS] || '/dashboard';
          return NextResponse.redirect(new URL(userDashboard, request.url));
       }
 
     } catch (error) {
-      console.error('Middleware verification error:', error);
+      // In case of any other error (e.g., network issue), redirect to login
+      console.error('Middleware verification fetch error:', error);
       const response = NextResponse.redirect(new URL('/login', request.url));
       response.cookies.delete('session');
       return response;
@@ -59,6 +78,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    // Match all routes except for static files, images, and the API routes themselves
     '/((?!api/|_next/static|_next/image|favicon.ico|manifest.json).*)',
   ],
 };
