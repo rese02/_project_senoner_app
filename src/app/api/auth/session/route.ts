@@ -1,5 +1,5 @@
 import { getAdminApp } from '@/firebase/admin';
-import { auth, firestore } from 'firebase-admin';
+import { auth as adminAuth, firestore as adminFirestore } from 'firebase-admin';
 import { cookies } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -9,9 +9,14 @@ const REDIRECTS: { [key: string]: string } = {
   customer: '/dashboard',
 };
 
+/**
+ * Fetches the user role from the 'users' collection in Firestore.
+ * @param uid The user's UID.
+ * @returns The user's role or 'customer' as a default.
+ */
 async function getUserRole(uid: string): Promise<string> {
   try {
-    const db = firestore();
+    const db = adminFirestore();
     const userDocRef = db.collection('users').doc(uid);
     const userDoc = await userDocRef.get();
     if (userDoc.exists) {
@@ -21,6 +26,7 @@ async function getUserRole(uid: string): Promise<string> {
     return 'customer';
   } catch (error) {
     console.error('Error fetching user role from Firestore:', error);
+    // In case of error, default to the most restrictive role for security.
     return 'customer';
   }
 }
@@ -32,21 +38,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ID Token ist erforderlich' }, { status: 400 });
   }
 
-  const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 Tage
+  // Session expires in 5 days
+  const expiresIn = 60 * 60 * 24 * 5 * 1000;
 
   try {
-    getAdminApp(); // Initialisiert die Admin-App, falls noch nicht geschehen
-    const decodedIdToken = await auth().verifyIdToken(idToken);
+    getAdminApp(); // Initialize Firebase Admin SDK
+    const decodedIdToken = await adminAuth().verifyIdToken(idToken);
     
-    // Get role from firestore to set it as a custom claim
+    // Get role from Firestore to set it as a custom claim
     const role = await getUserRole(decodedIdToken.uid);
 
-    // Set custom claim for role if it's not already set
+    // Set custom claim for role if it's not already set or differs
     if (decodedIdToken.role !== role) {
-      await auth().setCustomUserClaims(decodedIdToken.uid, { role });
+      await adminAuth().setCustomUserClaims(decodedIdToken.uid, { role });
     }
     
-    const sessionCookie = await auth().createSessionCookie(idToken, { expiresIn });
+    // Create the session cookie
+    const sessionCookie = await adminAuth().createSessionCookie(idToken, { expiresIn });
 
     const options = {
       name: 'session',
@@ -57,6 +65,7 @@ export async function POST(req: NextRequest) {
       path: '/',
     };
 
+    // Set the cookie in the response
     cookies().set(options);
 
     const redirectUrl = REDIRECTS[role] || '/dashboard';

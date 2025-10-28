@@ -37,17 +37,26 @@ export function RegisterForm() {
         title: 'Registrierung erfolgreich!',
         description: 'Ihr Konto wurde erstellt. Sie werden weitergeleitet...',
       });
-      // Wichtig: window.location.reload() erzwingt ein Neuladen der Seite.
+      // Wichtig: window.location.href erzwingt ein Neuladen der Seite.
       // Dadurch wird sichergestellt, dass die Middleware den neuen Session-Cookie korrekt auswertet.
       window.location.href = state.redirectUrl;
     } else if (state.message) {
-      toast({
-        variant: 'destructive',
-        title: 'Fehler bei der Registrierung',
-        description: state.message,
-      });
-       if(state.redirectUrl) {
-         router.push(state.redirectUrl);
+      // Handle cases where registration is successful but session creation fails
+       if (state.success) {
+         toast({
+            title: 'Konto erstellt',
+            description: state.message,
+         });
+         if(state.redirectUrl) {
+            router.push(state.redirectUrl);
+         }
+       } else {
+        // Handle registration failure
+        toast({
+          variant: 'destructive',
+          title: 'Fehler bei der Registrierung',
+          description: state.message,
+        });
        }
     }
   }, [state, router, toast]);
@@ -57,10 +66,12 @@ export function RegisterForm() {
       <div className="space-y-2">
         <Label htmlFor="name">Vollständiger Name</Label>
         <Input id="name" name="name" placeholder="Max Mustermann" required />
+        {state.errors?.name && <p className="text-sm text-destructive">{state.errors.name.join(', ')}</p>}
       </div>
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" type="email" placeholder="ihre@email.com" required />
+         {state.errors?.email && <p className="text-sm text-destructive">{state.errors.email.join(', ')}</p>}
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Passwort</Label>
@@ -72,6 +83,7 @@ export function RegisterForm() {
           required
           minLength={6}
         />
+         {state.errors?.password && <p className="text-sm text-destructive">{state.errors.password.join(', ')}</p>}
       </div>
       <SubmitButton />
     </form>

@@ -78,12 +78,18 @@ export async function handleLogin(prevState: any, formData: FormData): Promise<L
     const { redirectUrl } = await response.json();
     console.log('Sitzung erfolgreich erstellt. Weiterleitung zu:', redirectUrl);
 
+    // This part is crucial for Next.js Server Actions when a redirect is needed.
+    // The redirect() function from 'next/navigation' should be called outside the return statement.
+    // However, since we need to communicate the redirectUrl to the client to perform a full page reload,
+    // we return the URL and let the client handle the redirect.
     return { success: true, redirectUrl };
+
   } catch (e) {
     const error = e as AuthError;
     console.error('Login Fehler in handleLogin:', error.code, error.message);
     let message = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.';
     
+    // Provide more specific error messages
     if (
       error.code === 'auth/user-not-found' ||
       error.code === 'auth/wrong-password' ||
@@ -125,13 +131,14 @@ export async function handleRegister(prevState: any, formData: FormData): Promis
       firstName: firstName || '',
       lastName: lastName || '',
       email: user.email,
-      role: 'customer',
+      role: 'customer', // Standardrolle für neue Benutzer
       points: 0,
       rewards: [],
       coupons: [],
     });
     console.log('Benutzerdokument in Firestore erfolgreich erstellt für UID:', user.uid);
 
+    // After creating the user and their Firestore doc, create a session
     const idToken = await user.getIdToken();
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/session`, {
         method: 'POST',
@@ -140,6 +147,8 @@ export async function handleRegister(prevState: any, formData: FormData): Promis
     });
 
     if (!response.ok) {
+        // Even if session creation fails, registration was successful.
+        // Guide user to log in manually.
         console.error('Fehler bei der Sitzungserstellung nach Registrierung');
         return { success: true, message: "Konto erstellt, aber Sitzung konnte nicht erstellt werden.", redirectUrl: '/login?registration=success_no_session' };
     }
@@ -161,11 +170,16 @@ export async function handleRegister(prevState: any, formData: FormData): Promis
 
 export async function handleLogout() {
     try {
-        fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/logout`, {
+        // Call the logout API route to clear the session cookie
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/logout`, {
             method: 'POST',
         });
+        if(!response.ok) {
+            console.error("Server-side logout failed");
+        }
     } catch (error) {
         console.error("Logout fetch failed:", error);
     }
+    // Redirect to the login page after attempting to log out
     redirect('/login');
 }

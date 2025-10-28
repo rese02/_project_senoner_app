@@ -1,9 +1,12 @@
 import { getAdminApp } from '@/firebase/admin';
-import { auth } from 'firebase-admin';
+import { auth as adminAuth } from 'firebase-admin';
 import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
 
-// This API route runs in the Node.js runtime and can use firebase-admin.
+/**
+ * Verifies the session cookie provided in the request.
+ * This API route runs in the Node.js runtime and can use the Firebase Admin SDK.
+ */
 export async function GET(request: NextRequest) {
   const sessionCookie = cookies().get('session')?.value;
 
@@ -12,8 +15,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    getAdminApp(); // Ensure admin app is initialized
-    const decodedToken = await auth().verifySessionCookie(sessionCookie, true);
+    getAdminApp(); // Ensure Firebase Admin SDK is initialized
+    // Verify the session cookie. This checks for expiry and validity.
+    const decodedToken = await adminAuth().verifySessionCookie(sessionCookie, true);
     
     // The role is expected to be a custom claim on the token.
     const role = decodedToken.role || 'customer';

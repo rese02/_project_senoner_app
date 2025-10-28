@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PROTECTED_ROUTES = ['/dashboard', '/pre-order', '/admin', '/employee'];
+const PROTECTED_ROUTES = ['/dashboard', '/pre-order', '/admin', '/employee', '/profile'];
 const PUBLIC_ROUTES = ['/login', '/register'];
 
 // This middleware is now much simpler. It only handles redirects based on the presence
@@ -17,7 +17,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // If there is a session cookie, we need to verify it.
+  // If there is a session cookie, we need to verify it to protect routes
+  // and handle redirects from public routes.
   if (sessionCookie) {
     try {
       // The verification is handled by an API route that runs in the Node.js runtime.
@@ -35,7 +36,7 @@ export async function middleware(request: NextRequest) {
         return redirectResponse;
       }
       
-      const { role, uid } = await response.json();
+      const { role } = await response.json();
       
       const REDIRECTS: { [key: string]: string } = {
           admin: '/admin',
@@ -60,8 +61,11 @@ export async function middleware(request: NextRequest) {
          return NextResponse.redirect(new URL(userDashboard, request.url));
       }
       if ((pathname.startsWith('/dashboard') || pathname.startsWith('/pre-order')) && role !== 'customer') {
-         const userDashboard = REDIRECTS[role as keyof typeof REDIRECTS] || '/dashboard';
-         return NextResponse.redirect(new URL(userDashboard, request.url));
+         // Allow admins to see customer dashboard for debugging/overview
+         if (role !== 'admin') {
+            const userDashboard = REDIRECTS[role as keyof typeof REDIRECTS] || '/dashboard';
+            return NextResponse.redirect(new URL(userDashboard, request.url));
+         }
       }
 
     } catch (error) {

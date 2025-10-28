@@ -36,8 +36,9 @@ export function LoginForm() {
         title: 'Anmeldung erfolgreich',
         description: 'Willkommen zurück!',
       });
-      // Wichtig: window.location.reload() erzwingt ein Neuladen der Seite.
-      // Dadurch wird sichergestellt, dass die Middleware den neuen Session-Cookie korrekt auswertet.
+      // Wichtig: window.location.href erzwingt ein Neuladen der Seite.
+      // Dadurch wird sichergestellt, dass die Middleware den neuen Session-Cookie korrekt auswertet
+      // und die richtigen Custom Claims für die Navigation geladen werden.
       window.location.href = state.redirectUrl;
     } else if (!state.success && state.message) {
       toast({
