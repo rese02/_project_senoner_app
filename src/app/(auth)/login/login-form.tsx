@@ -27,6 +27,10 @@ export function LoginForm() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
+    toast({
+        title: 'Anmeldung wird verarbeitet...',
+        description: 'Bitte einen Moment Geduld.',
+    });
 
     const formData = new FormData(event.currentTarget);
     const email = formData.get('email') as string;
@@ -43,36 +47,40 @@ export function LoginForm() {
     }
 
     try {
-      // 1. Client-seitiger Login
+      console.log('1. Attempting client-side sign in...');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      console.log('2. Client-side sign in SUCCESSFUL. User:', user.uid);
       
-      // 2. ID-Token holen
-      const idToken = await userCredential.user.getIdToken();
-
-      // 3. ID-Token an API-Route senden, um serverseitige Session zu erstellen
+      console.log('3. Getting ID token...');
+      const idToken = await user.getIdToken();
+      console.log('4. Got ID token. Now sending to /api/auth/session');
+      
       const response = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
       });
+      console.log('5. Received response from server. Status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Sitzung konnte nicht erstellt werden.');
+        console.error('Server returned an error:', errorData);
+        throw new Error(errorData.details || 'Session creation failed on server.');
       }
 
       const { redirectUrl } = await response.json();
+      console.log('6. Server session created successfully! Redirecting to:', redirectUrl);
       
       toast({
-        title: 'Anmeldung erfolgreich',
-        description: 'Willkommen zurück!',
+        title: 'Anmeldung erfolgreich!',
+        description: 'Willkommen zurück! Sie werden weitergeleitet...',
       });
       
-      // 4. Weiterleiten, NACHDEM die serverseitige Session erstellt wurde
       router.push(redirectUrl || '/dashboard');
 
     } catch (error: any) {
-      console.error('Login-Fehler:', error);
+      console.error("Login process failed at some point:", error);
       let errorMessage = 'Ein unbekannter Fehler ist aufgetreten.';
       if (error.code) {
         switch (error.code) {
@@ -85,7 +93,7 @@ export function LoginForm() {
             errorMessage = 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.';
             break;
         }
-      } else if (error.message) {
+      } else {
         errorMessage = error.message;
       }
       

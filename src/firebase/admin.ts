@@ -1,17 +1,18 @@
 import admin from 'firebase-admin';
 
-// WICHTIG: Stellt sicher, dass sich eine Datei namens `service-account.json`
-// im Stammverzeichnis Ihres Projekts befindet. Diese Datei wird von git ignoriert.
-
 // Robuste Methode, um die Service-Account-Anmeldeinformationen zu erhalten
 function getServiceAccount() {
   try {
-    // Diese Methode ist zuverlässiger als Umgebungsvariablen in Next.js-Serverumgebungen
-    const serviceAccount = require('../../service-account.json');
-    return serviceAccount;
+    // Diese Umgebungsvariable MUSS in Ihrer Hosting-Umgebung gesetzt sein.
+    // Sie sollte den gesamten Inhalt der JSON-Datei als String enthalten.
+    const serviceAccountJson = process.env.SERVICE_ACCOUNT_KEY_JSON;
+    if (!serviceAccountJson) {
+      throw new Error('Die Umgebungsvariable SERVICE_ACCOUNT_KEY_JSON wurde nicht gefunden.');
+    }
+    return JSON.parse(serviceAccountJson);
   } catch (error) {
-    console.error('Fehler beim Laden der service-account.json:', error);
-    throw new Error('Die Datei service-account.json konnte nicht im Stammverzeichnis gefunden oder gelesen werden. Bitte stellen Sie sicher, dass sie existiert und ein gültiges JSON-Format hat.');
+    console.error('Fehler beim Parsen der service-account.json aus der Umgebungsvariable:', error);
+    throw new Error('Die Service-Account-Informationen konnten nicht geladen werden. Stellen Sie sicher, dass die Umgebungsvariable SERVICE_ACCOUNT_KEY_JSON korrekt gesetzt und ein gültiges JSON ist.');
   }
 }
 

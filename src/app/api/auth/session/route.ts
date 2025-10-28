@@ -11,13 +11,25 @@ const REDIRECTS: { [key: string]: string } = {
 };
 
 export async function POST(req: NextRequest) {
-  const { idToken } = await req.json();
-
-  if (!idToken) {
-    return NextResponse.json({ error: 'ID Token ist erforderlich' }, { status: 400 });
-  }
-
+    console.log('--- API /api/auth/session called ---');
   try {
+    
+    // Wichtiger Check: Ist der Service Account Key überhaupt da?
+    if (!process.env.SERVICE_ACCOUNT_KEY_JSON) {
+        console.error('FATAL: SERVICE_ACCOUNT_KEY_JSON is not set in environment variables.');
+        throw new Error('Server configuration error.');
+    }
+    console.log('Environment variable for service account found.');
+
+    const { idToken } = await req.json();
+
+    if (!idToken) {
+      console.log('Error: No ID token provided in request body.');
+      return NextResponse.json({ error: 'ID Token ist erforderlich' }, { status: 400 });
+    }
+    console.log('Received ID token. Verifying and creating session cookie...');
+
+
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
     console.log('Token verified for UID:', uid);
@@ -29,8 +41,6 @@ export async function POST(req: NextRequest) {
     if (userDoc.exists) {
       role = userDoc.data()?.role || 'customer';
     } else {
-      // This part might be redundant if user doc is created on registration,
-      // but it's a good fallback.
       await userDocRef.set({
         id: uid,
         email: decodedToken.email,
@@ -45,7 +55,6 @@ export async function POST(req: NextRequest) {
     
     console.log('User role determined as:', role);
 
-    // Set custom claims if they don't exist or are different
     if (decodedToken.role !== role) {
       await adminAuth.setCustomUserClaims(uid, { role });
        console.log(`Custom claim set to: ${role}`);
@@ -53,6 +62,7 @@ export async function POST(req: NextRequest) {
     
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days in milliseconds
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
+    console.log('Session cookie created successfully.');
 
     const options = {
       name: 'session',
@@ -69,10 +79,12 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json({ success: true, redirectUrl }, { status: 200 });
     response.cookies.set(options);
     
+    console.log('Cookie set in response headers. Sending success response.');
     return response;
 
   } catch (error: any) {
-    console.error('Fehler beim Erstellen des Session-Cookies:', error.message);
-    return NextResponse.json({ error: 'Nicht autorisiert: ' + error.message }, { status: 401 });
+    console.error('--- ERROR in /api/auth/session ---');
+    console.error(error);
+    return NextResponse.json({ error: 'Authentication failed on server.', details: error.message }, { status: 401 });
   }
 }
