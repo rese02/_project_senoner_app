@@ -19,9 +19,8 @@ export async function middleware(request: NextRequest) {
 
   // 2. Wenn ein Session-Cookie vorhanden ist...
   if (sessionCookie) {
-    // Wenn der Benutzer eingeloggt ist (Cookie hat) und versucht, auf Login/Register zuzugreifen,
-    // leiten wir ihn von den öffentlichen Routen weg. Wir leiten zu /dashboard, und die
-    // Seite selbst kann dann bei Bedarf rollenbasiert weiterleiten.
+    // Wenn der Benutzer eingeloggt ist und versucht, auf Login/Register zuzugreifen,
+    // leiten wir ihn zum Dashboard.
     if (isPublicRoute) {
       const absoluteDashboardURL = new URL('/dashboard', request.nextUrl.origin);
       return NextResponse.redirect(absoluteDashboardURL.toString());
@@ -39,7 +38,8 @@ export async function middleware(request: NextRequest) {
 
         // Wenn die Verifizierung fehlschlägt (z.B. 401 Unauthorized), leiten wir zum Login.
         if (!response.ok) {
-          return NextResponse.redirect(new URL('/login', request.url));
+          const absoluteLoginURL = new URL('/login', request.nextUrl.origin);
+          return NextResponse.redirect(absoluteLoginURL.toString());
         }
 
         const { role } = await response.json();
@@ -49,18 +49,19 @@ export async function middleware(request: NextRequest) {
           return NextResponse.redirect(new URL('/dashboard', request.url));
         }
         if (pathname.startsWith('/employee') && role !== 'employee' && role !== 'admin') {
-           return NextResponse.redirect(new URL('/dashboard', request.url));
+           return NextResponse.redirect(new URL('/employee/scan', request.url));
         }
 
       } catch (error) {
         // Bei einem Fehler bei der Überprüfung, ist es sicherer, zum Login umzuleiten.
         console.error('Middleware verification error:', error);
-        return NextResponse.redirect(new URL('/login', request.url));
+        const absoluteLoginURL = new URL('/login', request.nextUrl.origin);
+        return NextResponse.redirect(absoluteLoginURL.toString());
       }
     }
   }
   
-  // 3. Für alle anderen Fälle (z.B. öffentliche Seiten ohne Session-Cookie), weiter zur angeforderten Seite.
+  // 3. Für alle anderen Fälle, weiter zur angeforderten Seite.
   return NextResponse.next();
 }
 

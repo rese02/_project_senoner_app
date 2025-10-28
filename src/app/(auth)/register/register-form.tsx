@@ -1,24 +1,17 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
-import { useFormStatus } from 'react-dom';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { handleRegister } from '../actions';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
+import { doc, setDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase'; // Import useFirestore
 
-const initialState = {
-  success: false,
-  message: '',
-  errors: {},
-  redirectUrl: '',
-};
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
+function SubmitButton({ pending }: { pending: boolean }) {
   return (
     <Button type="submit" className="w-full" disabled={pending}>
       {pending ? <Loader2 className="animate-spin" /> : 'Registrieren'}
@@ -27,51 +20,105 @@ function SubmitButton() {
 }
 
 export function RegisterForm() {
-  const [state, formAction] = useActionState(handleRegister, initialState);
-  const router = useRouter();
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const auth = useAuth();
+  const firestore = useFirestore(); // Get firestore instance
 
-  useEffect(() => {
-    if (state.success && state.redirectUrl) {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(event.currentTarget);
+    const name = formData.get('name') as string;
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    if (!name || !email || !password) {
+      toast({
+        variant: 'destructive',
+        title: 'Fehlende Eingaben',
+        description: 'Bitte füllen Sie alle Felder aus.',
+      });
+      setLoading(false);
+      return;
+    }
+    if (password.length < 6) {
+       toast({
+        variant: 'destructive',
+        title: 'Unsicheres Passwort',
+        description: 'Das Passwort muss mindestens 6 Zeichen lang sein.',
+      });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // 1. Benutzer in Auth erstellen
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      const [firstName, ...lastNameParts] = name.split(' ');
+      const lastName = lastNameParts.join(' ');
+      
+      // 2. Benutzerdokument in Firestore erstellen
+      await setDoc(doc(firestore, 'users', user.uid), {
+        id: user.uid,
+        firstName: firstName || '',
+        lastName: lastName || '',
+        email: user.email,
+        role: 'customer', // Standardrolle
+        points: 0,
+        rewards: [],
+        coupons: [],
+      });
+      
+      // 3. Serverseitige Sitzung erstellen
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Sitzung konnte nicht erstellt werden.');
+      }
+
+      const { redirectUrl } = await response.json();
+      
       toast({
         title: 'Registrierung erfolgreich!',
         description: 'Ihr Konto wurde erstellt. Sie werden weitergeleitet...',
       });
-      // Wichtig: window.location.href erzwingt ein Neuladen der Seite.
-      // Dadurch wird sichergestellt, dass die Middleware den neuen Session-Cookie korrekt auswertet.
-      window.location.href = state.redirectUrl;
-    } else if (state.message) {
-      // Handle cases where registration is successful but session creation fails
-       if (state.success) {
-         toast({
-            title: 'Konto erstellt',
-            description: state.message,
-         });
-         if(state.redirectUrl) {
-            router.push(state.redirectUrl);
-         }
-       } else {
-        // Handle registration failure
-        toast({
-          variant: 'destructive',
-          title: 'Fehler bei der Registrierung',
-          description: state.message,
-        });
-       }
+
+      window.location.href = redirectUrl;
+
+    } catch (error: any) {
+      console.error('Registrierungs-Fehler:', error);
+      let errorMessage = 'Ein unbekannter Fehler ist aufgetreten.';
+       if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Diese E-Mail-Adresse wird bereits verwendet.';
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Fehler bei der Registrierung',
+        description: errorMessage,
+      });
+      setLoading(false);
     }
-  }, [state, router, toast]);
+  };
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="name">Vollständiger Name</Label>
-        <Input id="name" name="name" placeholder="Max Mustermann" required />
-        {state.errors?.name && <p className="text-sm text-destructive">{state.errors.name.join(', ')}</p>}
+        <Input id="name" name="name" placeholder="Max Mustermann" required disabled={loading}/>
       </div>
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" placeholder="ihre@email.com" required />
-         {state.errors?.email && <p className="text-sm text-destructive">{state.errors.email.join(', ')}</p>}
+        <Input id="email" name="email" type="email" placeholder="ihre@email.com" required disabled={loading}/>
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Passwort</Label>
@@ -82,10 +129,10 @@ export function RegisterForm() {
           placeholder="Mindestens 6 Zeichen"
           required
           minLength={6}
+          disabled={loading}
         />
-         {state.errors?.password && <p className="text-sm text-destructive">{state.errors.password.join(', ')}</p>}
       </div>
-      <SubmitButton />
+      <SubmitButton pending={loading} />
     </form>
   );
 }

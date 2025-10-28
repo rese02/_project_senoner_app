@@ -1,6 +1,6 @@
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminFirestore } from '@/firebase/admin';
 import { cookies } from 'next/headers';
-import { type NextRequest, NextResponse } from 'next/server';
 
 const REDIRECTS: { [key: string]: string } = {
   admin: '/admin',
@@ -8,23 +8,23 @@ const REDIRECTS: { [key: string]: string } = {
   customer: '/dashboard',
 };
 
-/**
- * Fetches the user role from the 'users' collection in Firestore.
- * @param uid The user's UID.
- * @returns The user's role or 'customer' as a default.
- */
-async function getUserRole(uid: string): Promise<string> {
-  try {
-    const userDocRef = adminFirestore.collection('users').doc(uid);
-    const userDoc = await userDocRef.get();
-    if (userDoc.exists) {
-      return userDoc.data()?.role || 'customer';
-    }
-    console.warn(`User document for ${uid} not found in Firestore. Defaulting to 'customer' role.`);
-    return 'customer';
-  } catch (error) {
-    console.error('Error fetching user role from Firestore:', error);
-    // In case of error, default to the most restrictive role for security.
+async function getOrCreateUserRole(uid: string, email: string | undefined): Promise<string> {
+  const userDocRef = adminFirestore.collection('users').doc(uid);
+  const userDoc = await userDocRef.get();
+
+  if (userDoc.exists) {
+    return userDoc.data()?.role || 'customer';
+  } else {
+    // Wenn der Benutzer in Firestore nicht existiert, erstellen Sie ihn mit der Standardrolle
+    await userDocRef.set({
+      id: uid,
+      email: email,
+      role: 'customer',
+      points: 0,
+      rewards: [],
+      coupons: [],
+      createdAt: new Date().toISOString(),
+    });
     return 'customer';
   }
 }
@@ -40,18 +40,20 @@ export async function POST(req: NextRequest) {
   const expiresIn = 60 * 60 * 24 * 5 * 1000;
 
   try {
-    const decodedIdToken = await adminAuth.verifyIdToken(idToken);
-    
-    // Get role from Firestore to set it as a custom claim
-    const role = await getUserRole(decodedIdToken.uid);
-
-    // Set custom claim for role if it's not already set or differs
-    if (decodedIdToken.role !== role) {
-      await adminAuth.setCustomUserClaims(decodedIdToken.uid, { role });
-    }
-    
-    // Create the session cookie
+    // Erstellen Sie direkt das Session-Cookie. Dies ist der empfohlene Weg.
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
+
+    // Verifizieren Sie das neu erstellte Session-Cookie, um die UID sicher zu erhalten
+    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie);
+    const uid = decodedToken.uid;
+
+    // Holen oder erstellen Sie die Benutzerrolle in Firestore
+    const role = await getOrCreateUserRole(uid, decodedToken.email);
+
+    // Setzen Sie den Custom Claim, falls er nicht existiert oder veraltet ist
+    if (decodedToken.role !== role) {
+      await adminAuth.setCustomUserClaims(uid, { role });
+    }
 
     const options = {
       name: 'session',
@@ -62,7 +64,7 @@ export async function POST(req: NextRequest) {
       path: '/',
     };
 
-    // Set the cookie in the response
+    // Setzen Sie den Cookie in der Antwort
     cookies().set(options);
 
     const redirectUrl = REDIRECTS[role] || '/dashboard';
