@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Kein import von firebase-admin → kein Node.js-Modul!
+import { adminAuth } from '@/firebase/admin';
 
 export async function middleware(request: NextRequest) {
   const session = request.cookies.get('session')?.value;
@@ -11,7 +10,6 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/dashboard') ||
     request.nextUrl.pathname.startsWith('/pre-order');
     
-  // 1. Kein Cookie? -> Login, wenn Route geschützt ist
   if (!session) {
     if (isProtectedRoute) {
       return NextResponse.redirect(new URL('/login', request.url));
@@ -20,26 +18,14 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    // 2. Session-Cookie manuell dekodieren (sicher, da Firebase signiert)
-    const payload = session.split('.')[1];
-    if (!payload) throw new Error('Invalid session format');
-
-    const decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
-    const role = decoded.role || 'customer';
-    const exp = decoded.exp;
-
-    // 3. Ablauf prüfen
-    if (exp && Date.now() >= exp * 1000) {
-      throw new Error('Session expired');
-    }
+    const decodedClaims = await adminAuth.verifySessionCookie(session, true);
+    const role = decodedClaims.role || 'customer';
     
-    // 4. Weiterleitung von eingeloggten Benutzern weg von Auth-Seiten
     if (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')) {
         const redirectUrl = role === 'admin' ? '/admin' : (role === 'employee' ? '/employee/scan' : '/dashboard');
         return NextResponse.redirect(new URL(redirectUrl, request.url));
     }
 
-    // 5. Rollen-Schutz
     if (request.nextUrl.pathname.startsWith('/admin') && role !== 'admin') {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
@@ -53,9 +39,8 @@ export async function middleware(request: NextRequest) {
 
     return NextResponse.next();
   } catch (error) {
-    console.log('Invalid or expired session, redirecting to login');
+    console.log('Invalid or expired session, redirecting to login:', error);
     const response = NextResponse.redirect(new URL('/login', request.url));
-    // Ungültigen Cookie löschen
     response.cookies.delete('session'); 
     return response;
   }
