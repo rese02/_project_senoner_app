@@ -62,10 +62,11 @@ export function LoginForm() {
         description: 'Willkommen zurück!',
       });
       
-      // WICHTIG: window.location.href erzwingt ein Neuladen der Seite.
-      // Dadurch wird sichergestellt, dass der Browser den neuen Session-Cookie
-      // bei der nächsten Anfrage korrekt mitsendet.
-      window.location.href = redirectUrl || '/dashboard';
+      if (redirectUrl) {
+         window.location.href = redirectUrl;
+      } else {
+        setError('Weiterleitung fehlgeschlagen: Keine URL erhalten.');
+      }
 
     } catch (error: any) {
       console.error('Login-Fehler:', error);
