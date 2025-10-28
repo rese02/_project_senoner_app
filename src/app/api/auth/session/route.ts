@@ -83,8 +83,20 @@ export async function POST(req: NextRequest) {
     return response;
 
   } catch (error: any) {
-    console.error('--- ERROR in /api/auth/session ---');
-    console.error(error);
-    return NextResponse.json({ error: 'Authentication failed on server.', details: error.message }, { status: 401 });
+    console.error('--- CRITICAL ERROR in /api/auth/session ---');
+    console.error(error); // Loggt das komplette Fehlerobjekt
+
+    // Erstelle eine sicherere Fehlermeldung
+    const errorMessage = error.message || 'An unknown server error occurred.';
+    const errorStack = process.env.NODE_ENV === 'development' ? error.stack : undefined;
+
+    return NextResponse.json(
+      { 
+        error: 'Authentication failed on server.', 
+        details: errorMessage,
+        stack: errorStack // Sende den Stack Trace nur im Entwicklungsmodus
+      }, 
+      { status: 500 }
+    );
   }
 }
