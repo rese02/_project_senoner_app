@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { adminAuth } from '@/firebase/admin';
 
 export async function middleware(request: NextRequest) {
   const session = request.cookies.get('session')?.value;
+  const { pathname } = request.nextUrl;
   console.log(`Middleware: Path '${pathname}', Session exists? ${!!session}`);
 
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
 
       // Enforce role-based access for protected routes
       if (pathname.startsWith('/admin') && role !== 'admin') {
-        return NextResponse.redirect(new URL('/dashboard', request.url));
+        return NextResponse.redirect(new URL('/employee/scan', request.url));
       }
       if (pathname.startsWith('/employee') && role !== 'employee' && role !== 'admin') {
         return NextResponse.redirect(new URL('/dashboard', request.url));
