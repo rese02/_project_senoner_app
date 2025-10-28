@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PROTECTED_ROUTES = ['/dashboard', '/pre-order', '/admin', '/employee', '/profile'];
+const PROTECTED_ROUTES = ['/dashboard', '/pre-order', '/admin', '/employee', '/dashboard/profile'];
 const PUBLIC_ROUTES = ['/login', '/register'];
 
 // This middleware is now much simpler. It only handles redirects based on the presence
