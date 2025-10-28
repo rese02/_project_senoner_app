@@ -36,9 +36,13 @@ const navConfig = {
 
 export function MobileNav() {
   const pathname = usePathname();
-  const { role } = useUser();
+  const { role, isUserLoading } = useUser();
 
-  const navItems = role ? navConfig[role as keyof typeof navConfig] : navConfig.customer;
+  if (isUserLoading) {
+    return null; // or a loading skeleton
+  }
+
+  const navItems = role ? navConfig[role as keyof typeof navConfig] : [];
 
   const renderNavItem = (item: { href: string; label: string; icon: React.ElementType }) => {
     const isActive = pathname === item.href;

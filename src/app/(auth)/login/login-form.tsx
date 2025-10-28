@@ -65,7 +65,11 @@ export function LoginForm() {
       if (redirectUrl) {
          window.location.href = redirectUrl;
       } else {
-        setError('Weiterleitung fehlgeschlagen: Keine URL erhalten.');
+        toast({
+            variant: 'destructive',
+            title: 'Fehler',
+            description: 'Weiterleitung fehlgeschlagen: Keine URL erhalten.',
+        });
       }
 
     } catch (error: any) {
@@ -91,7 +95,8 @@ export function LoginForm() {
         title: 'Fehler bei der Anmeldung',
         description: errorMessage,
       });
-      setLoading(false);
+    } finally {
+        setLoading(false);
     }
   };
 

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
-    console.log('Token verified for UID:', uid); 
+    console.log('Token verified for UID:', uid);
 
     const userDocRef = adminFirestore.collection('users').doc(uid);
     const userDoc = await userDocRef.get();

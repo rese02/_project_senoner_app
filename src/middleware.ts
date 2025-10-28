@@ -18,37 +18,45 @@ export async function middleware(request: NextRequest) {
   }
 
   if (sessionCookie) {
-    if (isPublicRoute) {
-      const absoluteDashboardURL = new URL('/dashboard', request.nextUrl.origin);
-      return NextResponse.redirect(absoluteDashboardURL.toString());
-    }
-
-    if (isProtectedRoute) {
-      try {
-        const response = await fetch(new URL('/api/auth/verify', request.url), {
-          headers: {
-            'Cookie': `session=${sessionCookie}`
-          }
-        });
-
-        if (!response.ok) {
+    // API route for verification
+    const verifyUrl = new URL('/api/auth/verify', request.nextUrl.origin);
+    
+    try {
+      const response = await fetch(verifyUrl, {
+        headers: {
+          'Cookie': `session=${sessionCookie}`
+        }
+      });
+      
+      if (!response.ok) {
+        // Verification failed, invalid session
+        if (isProtectedRoute) {
           const absoluteLoginURL = new URL('/login', request.nextUrl.origin);
           console.log('Middleware: Token invalid (verify failed), redirecting to login.');
           return NextResponse.redirect(absoluteLoginURL.toString());
         }
-
+      } else {
         const { role } = await response.json();
         console.log(`Middleware: Role '${role}' verified for path '${pathname}'.`);
 
+        // If user with valid session tries to access public routes like login, redirect them away
+        if (isPublicRoute) {
+            const redirectUrl = role === 'admin' ? '/admin' : (role === 'employee' ? '/employee/scan' : '/dashboard');
+            return NextResponse.redirect(new URL(redirectUrl, request.url));
+        }
+
+        // Enforce role-based access for protected routes
         if (pathname.startsWith('/admin') && role !== 'admin') {
           return NextResponse.redirect(new URL('/dashboard', request.url));
         }
         if (pathname.startsWith('/employee') && role !== 'employee' && role !== 'admin') {
            return NextResponse.redirect(new URL('/dashboard', request.url));
         }
+      }
 
-      } catch (error) {
-        console.error('Middleware verification error:', error);
+    } catch (error) {
+      console.error('Middleware verification error:', error);
+      if (isProtectedRoute) {
         const absoluteLoginURL = new URL('/login', request.nextUrl.origin);
         return NextResponse.redirect(absoluteLoginURL.toString());
       }

@@ -53,8 +53,12 @@ const roleLabels: { [key: string]: string } = {
 
 export function MainNav() {
   const pathname = usePathname();
-  const { role } = useUser();
+  const { role, isUserLoading } = useUser();
   const isActive = (path: string) => pathname === path;
+
+  if (isUserLoading) {
+    return null; // or a loading skeleton
+  }
 
   const navItems = role ? navConfig[role as keyof typeof navConfig] : [];
   const roleLabel = role ? roleLabels[role as keyof typeof roleLabels] : 'Menü';
