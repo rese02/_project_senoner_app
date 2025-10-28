@@ -1,5 +1,4 @@
-import { getAdminApp } from '@/firebase/admin';
-import { auth as adminAuth, firestore as adminFirestore } from 'firebase-admin';
+import { adminAuth, adminFirestore } from '@/firebase/admin';
 import { cookies } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -16,8 +15,7 @@ const REDIRECTS: { [key: string]: string } = {
  */
 async function getUserRole(uid: string): Promise<string> {
   try {
-    const db = adminFirestore();
-    const userDocRef = db.collection('users').doc(uid);
+    const userDocRef = adminFirestore.collection('users').doc(uid);
     const userDoc = await userDocRef.get();
     if (userDoc.exists) {
       return userDoc.data()?.role || 'customer';
@@ -42,19 +40,18 @@ export async function POST(req: NextRequest) {
   const expiresIn = 60 * 60 * 24 * 5 * 1000;
 
   try {
-    getAdminApp(); // Initialize Firebase Admin SDK
-    const decodedIdToken = await adminAuth().verifyIdToken(idToken);
+    const decodedIdToken = await adminAuth.verifyIdToken(idToken);
     
     // Get role from Firestore to set it as a custom claim
     const role = await getUserRole(decodedIdToken.uid);
 
     // Set custom claim for role if it's not already set or differs
     if (decodedIdToken.role !== role) {
-      await adminAuth().setCustomUserClaims(decodedIdToken.uid, { role });
+      await adminAuth.setCustomUserClaims(decodedIdToken.uid, { role });
     }
     
     // Create the session cookie
-    const sessionCookie = await adminAuth().createSessionCookie(idToken, { expiresIn });
+    const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
 
     const options = {
       name: 'session',

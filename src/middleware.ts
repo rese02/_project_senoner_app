@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PROTECTED_ROUTES = ['/dashboard', '/pre-order', '/admin', '/employee', '/dashboard/profile'];
+const PROTECTED_ROUTES = ['/dashboard', '/pre-order', '/admin', '/employee'];
 const PUBLIC_ROUTES = ['/login', '/register'];
 
 // This middleware is now much simpler. It only handles redirects based on the presence
@@ -63,7 +63,7 @@ export async function middleware(request: NextRequest) {
       if ((pathname.startsWith('/dashboard') || pathname.startsWith('/pre-order')) && role !== 'customer') {
          // Allow admins to see customer dashboard for debugging/overview
          if (role !== 'admin') {
-            const userDashboard = REDIRECTS[role as keyof typeof REDIRECTS] || '/dashboard';
+            const userDashboard = REDIRECTS[role as keyof typeof REDIRECTS] || '/employee/scan';
             return NextResponse.redirect(new URL(userDashboard, request.url));
          }
       }
