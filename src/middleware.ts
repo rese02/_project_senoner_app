@@ -33,13 +33,13 @@ export async function middleware(request: NextRequest) {
       throw new Error('Session expired');
     }
     
-    // 3. Weiterleitung von eingeloggten Benutzern weg von Auth-Seiten
+    // 4. Weiterleitung von eingeloggten Benutzern weg von Auth-Seiten
     if (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')) {
         const redirectUrl = role === 'admin' ? '/admin' : (role === 'employee' ? '/employee/scan' : '/dashboard');
         return NextResponse.redirect(new URL(redirectUrl, request.url));
     }
 
-    // 4. Rollen-Schutz
+    // 5. Rollen-Schutz
     if (request.nextUrl.pathname.startsWith('/admin') && role !== 'admin') {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
