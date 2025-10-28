@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 function SubmitButton({ pending }: { pending: boolean }) {
   return (
@@ -21,6 +22,7 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const auth = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -41,9 +43,13 @@ export function LoginForm() {
     }
 
     try {
+      // 1. Client-seitiger Login
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // 2. ID-Token holen
       const idToken = await userCredential.user.getIdToken();
 
+      // 3. ID-Token an API-Route senden, um serverseitige Session zu erstellen
       const response = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,15 +68,8 @@ export function LoginForm() {
         description: 'Willkommen zurück!',
       });
       
-      if (redirectUrl) {
-         window.location.href = redirectUrl;
-      } else {
-        toast({
-            variant: 'destructive',
-            title: 'Fehler',
-            description: 'Weiterleitung fehlgeschlagen: Keine URL erhalten.',
-        });
-      }
+      // 4. Weiterleiten, NACHDEM die serverseitige Session erstellt wurde
+      router.push(redirectUrl || '/dashboard');
 
     } catch (error: any) {
       console.error('Login-Fehler:', error);

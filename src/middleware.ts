@@ -24,9 +24,8 @@ export async function middleware(request: NextRequest) {
   if (session) {
     try {
       // Decode the session cookie payload without verifying it.
-      // The verification is implicitly handled by Firebase on the backend.
-      // This manual decoding is safe for role-based redirects as the cookie
-      // is httpOnly and signed by Firebase.
+      // This is safe for role-based redirects as the cookie is httpOnly,
+      // and its integrity is verified on the server in API Routes or Server Components.
       const payload = session.split('.')[1];
       if (!payload) {
         throw new Error('Invalid session cookie format');

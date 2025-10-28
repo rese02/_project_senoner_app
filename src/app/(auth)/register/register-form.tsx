@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase'; // Import useFirestore
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { useRouter } from 'next/navigation';
 
 function SubmitButton({ pending }: { pending: boolean }) {
   return (
@@ -23,7 +24,8 @@ export function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const auth = useAuth();
-  const firestore = useFirestore(); // Get firestore instance
+  const firestore = useFirestore();
+  const router = useRouter();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -71,6 +73,7 @@ export function RegisterForm() {
         points: 0,
         rewards: [],
         coupons: [],
+        createdAt: serverTimestamp()
       });
       
       // 3. Serverseitige Sitzung erstellen
@@ -93,7 +96,7 @@ export function RegisterForm() {
         description: 'Ihr Konto wurde erstellt. Sie werden weitergeleitet...',
       });
 
-      window.location.href = redirectUrl;
+      router.push(redirectUrl || '/dashboard');
 
     } catch (error: any) {
       console.error('Registrierungs-Fehler:', error);
@@ -106,7 +109,8 @@ export function RegisterForm() {
         title: 'Fehler bei der Registrierung',
         description: errorMessage,
       });
-      setLoading(false);
+    } finally {
+        setLoading(false);
     }
   };
 

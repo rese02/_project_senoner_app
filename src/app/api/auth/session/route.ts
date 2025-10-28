@@ -1,3 +1,5 @@
+'use server';
+
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminFirestore } from '@/firebase/admin';
 import admin from 'firebase-admin';
@@ -27,6 +29,8 @@ export async function POST(req: NextRequest) {
     if (userDoc.exists) {
       role = userDoc.data()?.role || 'customer';
     } else {
+      // This part might be redundant if user doc is created on registration,
+      // but it's a good fallback.
       await userDocRef.set({
         id: uid,
         email: decodedToken.email,
@@ -36,17 +40,18 @@ export async function POST(req: NextRequest) {
         coupons: [],
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      console.log(`User document created for UID: ${uid}`);
+       console.log(`User document created for UID: ${uid}`);
     }
     
     console.log('User role determined as:', role);
 
+    // Set custom claims if they don't exist or are different
     if (decodedToken.role !== role) {
       await adminAuth.setCustomUserClaims(uid, { role });
-      console.log(`Custom claim set to: ${role}`);
+       console.log(`Custom claim set to: ${role}`);
     }
     
-    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 Tage in Millisekunden
+    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days in milliseconds
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
 
     const options = {
@@ -59,7 +64,9 @@ export async function POST(req: NextRequest) {
       sameSite: 'lax' as const,
     };
 
-    const response = NextResponse.json({ success: true, redirectUrl: REDIRECTS[role] || '/dashboard' }, { status: 200 });
+    const redirectUrl = REDIRECTS[role] || '/dashboard';
+    
+    const response = NextResponse.json({ success: true, redirectUrl }, { status: 200 });
     response.cookies.set(options);
     
     return response;
