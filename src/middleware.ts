@@ -6,11 +6,7 @@ export async function middleware(request: NextRequest) {
   const session = request.cookies.get('session')?.value;
   const { pathname } = request.nextUrl;
 
-  const isProtectedRoute =
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/employee') ||
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/pre-order');
+  const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/employee');
 
   // If there's no session cookie and the user is trying to access a protected route,
   // redirect them to the login page.
@@ -80,6 +76,11 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+// This matcher applies the middleware to all routes EXCEPT for the ones starting with:
+// - api (API routes)
+// - _next/static (static files)
+// - _next/image (image optimization files)
+// - favicon.ico (favicon file)
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
