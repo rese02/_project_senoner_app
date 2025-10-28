@@ -1,16 +1,19 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
-// This middleware is Edge-compatible and does not use firebase-admin.
-
 export async function middleware(request: NextRequest) {
   const session = request.cookies.get('session')?.value;
   const { pathname } = request.nextUrl;
+
+  console.log(`--- Middleware ---`);
+  console.log(`Path: ${pathname}`);
+  console.log(`Session Cookie Exists: ${!!session}`);
 
   const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/employee');
 
   // If there's no session cookie and the user is trying to access a protected route,
   // redirect them to the login page.
   if (!session && isProtectedRoute) {
+    console.log('Decision: No cookie, redirecting to /login');
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
@@ -38,6 +41,7 @@ export async function middleware(request: NextRequest) {
       // If the user is logged in, redirect them away from login/register pages.
       if (pathname.startsWith('/login') || pathname.startsWith('/register')) {
         const redirectUrl = role === 'admin' ? '/admin' : (role === 'employee' ? '/employee/scan' : '/dashboard');
+        console.log(`Decision: User logged in, redirecting from auth page to ${redirectUrl}`);
         const url = request.nextUrl.clone();
         url.pathname = redirectUrl;
         return NextResponse.redirect(url);
@@ -45,6 +49,7 @@ export async function middleware(request: NextRequest) {
 
       // 4. Role-based route protection
       if (pathname.startsWith('/admin') && role !== 'admin') {
+        console.log('Decision: Non-admin trying to access /admin, redirecting to /dashboard');
         const url = request.nextUrl.clone();
         url.pathname = '/dashboard';
         return NextResponse.redirect(url);
@@ -54,15 +59,17 @@ export async function middleware(request: NextRequest) {
         role !== 'employee' &&
         role !== 'admin'
       ) {
+        console.log('Decision: Non-employee trying to access /employee, redirecting to /dashboard');
         const url = request.nextUrl.clone();
         url.pathname = '/dashboard';
         return NextResponse.redirect(url);
       }
 
       // If all checks pass, allow the request to proceed.
+      console.log('Decision: Valid session and role, allowing request.');
       return NextResponse.next();
     } catch (error) {
-      console.log('Invalid or expired session, redirecting to login');
+      console.log('Middleware error (invalid/expired session), redirecting to login');
       // If the cookie is invalid or expired, delete it and redirect to login.
       const url = request.nextUrl.clone();
       url.pathname = '/login';
@@ -73,6 +80,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // For any other case, allow the request to proceed.
+  console.log('Decision: No session and not a protected route, allowing request.');
   return NextResponse.next();
 }
 
