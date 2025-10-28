@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     if (userDoc.exists) {
       role = userDoc.data()?.role || 'customer';
     } else {
+      // Erstelle das Benutzerdokument, wenn es nicht existiert
       await userDocRef.set({
         id: uid,
         email: decodedToken.email,
@@ -42,12 +43,13 @@ export async function POST(req: NextRequest) {
     
     console.log('User role determined as:', role);
 
+    // Setze den Custom Claim, falls er nicht mit der Rolle in Firestore übereinstimmt
     if (decodedToken.role !== role) {
       await adminAuth.setCustomUserClaims(uid, { role });
       console.log(`Custom claim set to: ${role}`);
     }
     
-    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days in milliseconds
+    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 Tage in Millisekunden
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
 
     const options = {

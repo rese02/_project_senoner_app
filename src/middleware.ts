@@ -1,34 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { adminAuth } from '@/firebase/admin';
 
 export async function middleware(request: NextRequest) {
-  const session = request.cookies.get('__session')?.value;
+  const session = request.cookies.get('session')?.value;
 
-  // 1. Kein Cookie? → Login
+  // 1. Kein Cookie? -> Login, wenn Route geschützt ist
+  const isProtectedRoute = 
+    request.nextUrl.pathname.startsWith('/admin') ||
+    request.nextUrl.pathname.startsWith('/employee') ||
+    request.nextUrl.pathname.startsWith('/dashboard') ||
+    request.nextUrl.pathname.startsWith('/pre-order');
+    
   if (!session) {
-    if (
-      request.nextUrl.pathname.startsWith('/admin') ||
-      request.nextUrl.pathname.startsWith('/employee') ||
-      request.nextUrl.pathname.startsWith('/dashboard') ||
-      request.nextUrl.pathname.startsWith('/pre-order')
-    ) {
+    if (isProtectedRoute) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
     return NextResponse.next();
   }
 
   try {
-    // 2. Rolle aus Session-Cookie extrahieren (ohne verifySessionCookie!)
-    const payload = session.split('.')[1];
-    const decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
-    const role = decoded.role || 'customer';
+    // 2. Cookie verifizieren
+    const decodedClaims = await adminAuth.verifySessionCookie(session, true);
+    const role = decodedClaims.role || 'customer';
 
-    // Redirect logged-in users away from auth pages
+    // 3. Weiterleitung von eingeloggten Benutzern weg von Auth-Seiten
     if (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')) {
         const redirectUrl = role === 'admin' ? '/admin' : (role === 'employee' ? '/employee/scan' : '/dashboard');
         return NextResponse.redirect(new URL(redirectUrl, request.url));
     }
 
-    // 3. Rollen-Schutz
+    // 4. Rollen-Schutz
     if (request.nextUrl.pathname.startsWith('/admin') && role !== 'admin') {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
@@ -42,9 +43,10 @@ export async function middleware(request: NextRequest) {
 
     return NextResponse.next();
   } catch (error) {
-    console.log('Invalid session cookie, redirecting to login');
+    console.log('Invalid session cookie, redirecting to login:', error);
     const response = NextResponse.redirect(new URL('/login', request.url));
-    response.cookies.set('session', '', { maxAge: -1 });
+    // Ungültigen Cookie löschen
+    response.cookies.set('session', '', { maxAge: -1 }); 
     return response;
   }
 }
