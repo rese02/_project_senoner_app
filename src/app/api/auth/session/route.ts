@@ -16,9 +16,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ID Token ist erforderlich' }, { status: 400 });
   }
 
-  // Session expires in 5 days
-  const expiresIn = 60 * 60 * 24 * 5 * 1000;
-
   try {
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
@@ -49,7 +46,8 @@ export async function POST(req: NextRequest) {
       await adminAuth.setCustomUserClaims(uid, { role });
       console.log(`Custom claim set to: ${role}`);
     }
-
+    
+    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days in milliseconds
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
 
     const options = {
@@ -59,6 +57,7 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       path: '/',
+      sameSite: 'lax' as const,
     };
 
     cookies().set(options);

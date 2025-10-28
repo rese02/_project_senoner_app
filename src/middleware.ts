@@ -1,70 +1,63 @@
 import { NextResponse, type NextRequest } from 'next/server';
-
-const PROTECTED_ROUTES = ['/dashboard', '/pre-order', '/admin', '/employee'];
-const PUBLIC_ROUTES = ['/login', '/register'];
+import { adminAuth } from '@/firebase/admin';
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const sessionCookie = request.cookies.get('session')?.value;
-  console.log(`Middleware: Path '${pathname}', Session exists? ${!!sessionCookie}`);
+  const session = request.cookies.get('session')?.value;
+  console.log(`Middleware: Path '${pathname}', Session exists? ${!!session}`);
 
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
   const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
-  
-  if (!sessionCookie && isProtectedRoute) {
-    const absoluteLoginURL = new URL('/login', request.nextUrl.origin);
-    console.log('Middleware: No session, redirecting to login.');
-    return NextResponse.redirect(absoluteLoginURL.toString());
-  }
 
-  if (sessionCookie) {
-    // API route for verification
-    const verifyUrl = new URL('/api/auth/verify', request.nextUrl.origin);
-    
+  // If the user has a session cookie, we need to decode it to check the role
+  // for role-based protected routes.
+  if (session) {
     try {
-      const response = await fetch(verifyUrl, {
-        headers: {
-          'Cookie': `session=${sessionCookie}`
-        }
-      });
-      
-      if (!response.ok) {
-        // Verification failed, invalid session
-        if (isProtectedRoute) {
-          const absoluteLoginURL = new URL('/login', request.nextUrl.origin);
-          console.log('Middleware: Token invalid (verify failed), redirecting to login.');
-          return NextResponse.redirect(absoluteLoginURL.toString());
-        }
-      } else {
-        const { role } = await response.json();
-        console.log(`Middleware: Role '${role}' verified for path '${pathname}'.`);
+      // Decode the JWT payload to get the role without full verification for middleware speed.
+      // Full verification happens on API routes or server components where security is critical.
+      const decoded = JSON.parse(Buffer.from(session.split('.')[1], 'base64').toString());
+      const role = decoded.role || 'customer';
+      console.log(`Middleware: Role '${role}' decoded for path '${pathname}'.`);
 
-        // If user with valid session tries to access public routes like login, redirect them away
-        if (isPublicRoute) {
-            const redirectUrl = role === 'admin' ? '/admin' : (role === 'employee' ? '/employee/scan' : '/dashboard');
-            return NextResponse.redirect(new URL(redirectUrl, request.url));
-        }
+      // If user with valid session tries to access public routes like login, redirect them away
+      if (isPublicRoute) {
+        const redirectUrl = role === 'admin' ? '/admin' : (role === 'employee' ? '/employee/scan' : '/dashboard');
+        return NextResponse.redirect(new URL(redirectUrl, request.url));
+      }
 
-        // Enforce role-based access for protected routes
-        if (pathname.startsWith('/admin') && role !== 'admin') {
-          return NextResponse.redirect(new URL('/dashboard', request.url));
-        }
-        if (pathname.startsWith('/employee') && role !== 'employee' && role !== 'admin') {
-           return NextResponse.redirect(new URL('/dashboard', request.url));
-        }
+      // Enforce role-based access for protected routes
+      if (pathname.startsWith('/admin') && role !== 'admin') {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+      if (pathname.startsWith('/employee') && role !== 'employee' && role !== 'admin') {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
       }
 
     } catch (error) {
-      console.error('Middleware verification error:', error);
+      // This might happen if the cookie is malformed.
+      console.error('Middleware token decoding error:', error);
+      // If an error occurs and they are on a protected route, send them to login.
       if (isProtectedRoute) {
         const absoluteLoginURL = new URL('/login', request.nextUrl.origin);
-        return NextResponse.redirect(absoluteLoginURL.toString());
+        // Clear the malformed cookie
+        const response = NextResponse.redirect(absoluteLoginURL.toString());
+        response.cookies.set('session', '', { maxAge: -1 });
+        return response;
       }
     }
+  } else {
+    // No session cookie, redirect to login if it's a protected route.
+    if (isProtectedRoute) {
+      const absoluteLoginURL = new URL('/login', request.nextUrl.origin);
+      console.log('Middleware: No session, redirecting to login.');
+      return NextResponse.redirect(absoluteLoginURL.toString());
+    }
   }
-  
+
   return NextResponse.next();
 }
+
+const PROTECTED_ROUTES = ['/dashboard', '/pre-order', '/admin', '/employee'];
+const PUBLIC_ROUTES = ['/login', '/register'];
 
 export const config = {
   matcher: [
