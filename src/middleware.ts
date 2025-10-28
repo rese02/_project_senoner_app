@@ -3,86 +3,70 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PROTECTED_ROUTES = ['/dashboard', '/pre-order', '/admin', '/employee'];
 const PUBLIC_ROUTES = ['/login', '/register'];
 
-// This middleware is now much simpler. It only handles redirects based on the presence
-// of a session cookie and delegates the actual verification to an API route.
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session')?.value;
 
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
   const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
-
-  // If no session cookie and trying to access a protected route, redirect to login
+  
+  // 1. Wenn kein Session-Cookie vorhanden ist und versucht wird, auf eine geschützte Route zuzugreifen,
+  // leiten wir zur Login-Seite weiter.
   if (!sessionCookie && isProtectedRoute) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    const absoluteLoginURL = new URL('/login', request.nextUrl.origin);
+    return NextResponse.redirect(absoluteLoginURL.toString());
   }
 
-  // If there is a session cookie, we need to verify it to protect routes
-  // and handle redirects from public routes.
+  // 2. Wenn ein Session-Cookie vorhanden ist...
   if (sessionCookie) {
-    try {
-      // The verification is handled by an API route that runs in the Node.js runtime.
-      const response = await fetch(`${request.nextUrl.origin}/api/auth/verify`, {
-        headers: {
-          Cookie: `session=${sessionCookie}`,
-        },
-      });
+    // Wenn der Benutzer eingeloggt ist (Cookie hat) und versucht, auf Login/Register zuzugreifen,
+    // leiten wir ihn von den öffentlichen Routen weg. Wir leiten zu /dashboard, und die
+    // Seite selbst kann dann bei Bedarf rollenbasiert weiterleiten.
+    if (isPublicRoute) {
+      const absoluteDashboardURL = new URL('/dashboard', request.nextUrl.origin);
+      return NextResponse.redirect(absoluteDashboardURL.toString());
+    }
 
-      // If verification fails (e.g., token expired), redirect to login and clear the invalid cookie.
-      if (!response.ok) {
-        const loginUrl = new URL('/login', request.url);
-        const redirectResponse = NextResponse.redirect(loginUrl);
-        redirectResponse.cookies.delete('session');
-        return redirectResponse;
-      }
-      
-      const { role } = await response.json();
-      
-      const REDIRECTS: { [key: string]: string } = {
-          admin: '/admin',
-          employee: '/employee/scan',
-          customer: '/dashboard',
-      };
+    // Für geschützte Routen rufen wir eine 'verify' API-Route auf,
+    // um den Cookie serverseitig zu überprüfen.
+    if (isProtectedRoute) {
+      try {
+        const response = await fetch(new URL('/api/auth/verify', request.url), {
+          headers: {
+            'Cookie': `session=${sessionCookie}`
+          }
+        });
 
-      // If user is authenticated and tries to access a public route (login/register),
-      // redirect them to their respective dashboard.
-      if (isPublicRoute) {
-        const targetUrl = REDIRECTS[role as keyof typeof REDIRECTS] || '/dashboard';
-        return NextResponse.redirect(new URL(targetUrl, request.url));
-      }
+        // Wenn die Verifizierung fehlschlägt (z.B. 401 Unauthorized), leiten wir zum Login.
+        if (!response.ok) {
+          return NextResponse.redirect(new URL('/login', request.url));
+        }
 
-      // Enforce role-based access to protected routes
-      if (pathname.startsWith('/admin') && role !== 'admin') {
-         const userDashboard = REDIRECTS[role as keyof typeof REDIRECTS] || '/dashboard';
-         return NextResponse.redirect(new URL(userDashboard, request.url));
-      }
-      if (pathname.startsWith('/employee') && role !== 'employee' && role !== 'admin') {
-         const userDashboard = REDIRECTS[role as keyof typeof REDIRECTS] || '/dashboard';
-         return NextResponse.redirect(new URL(userDashboard, request.url));
-      }
-      if ((pathname.startsWith('/dashboard') || pathname.startsWith('/pre-order')) && role !== 'customer') {
-         // Allow admins to see customer dashboard for debugging/overview
-         if (role !== 'admin') {
-            const userDashboard = REDIRECTS[role as keyof typeof REDIRECTS] || '/employee/scan';
-            return NextResponse.redirect(new URL(userDashboard, request.url));
-         }
-      }
+        const { role } = await response.json();
 
-    } catch (error) {
-      // In case of any other error (e.g., network issue), redirect to login
-      console.error('Middleware verification fetch error:', error);
-      const response = NextResponse.redirect(new URL('/login', request.url));
-      response.cookies.delete('session');
-      return response;
+        // Rollenbasierter Zugriffsschutz
+        if (pathname.startsWith('/admin') && role !== 'admin') {
+          return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
+        if (pathname.startsWith('/employee') && role !== 'employee' && role !== 'admin') {
+           return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
+
+      } catch (error) {
+        // Bei einem Fehler bei der Überprüfung, ist es sicherer, zum Login umzuleiten.
+        console.error('Middleware verification error:', error);
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
     }
   }
-
+  
+  // 3. Für alle anderen Fälle (z.B. öffentliche Seiten ohne Session-Cookie), weiter zur angeforderten Seite.
   return NextResponse.next();
 }
 
 export const config = {
-  // Match all routes except for static files, images, and the API routes themselves
+  // Alle Routen außer statischen Dateien, Bildern und den API-Routen selbst.
   matcher: [
-    '/((?!api/|_next/static|_next/image|favicon.ico|manifest.json).*)',
+    '/((?!api/|_next/static|_next/image|favicon.ico|manifest.json|service-account.json).*)',
   ],
 };

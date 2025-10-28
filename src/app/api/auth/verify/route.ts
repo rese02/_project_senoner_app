@@ -1,31 +1,27 @@
-import { getAdminApp } from '@/firebase/admin';
-import { auth as adminAuth } from 'firebase-admin';
 import { cookies } from 'next/headers';
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { adminAuth } from '@/firebase/admin';
 
-/**
- * Verifies the session cookie provided in the request.
- * This API route runs in the Node.js runtime and can use the Firebase Admin SDK.
- */
 export async function GET(request: NextRequest) {
   const sessionCookie = cookies().get('session')?.value;
 
   if (!sessionCookie) {
-    return NextResponse.json({ error: 'Nicht autorisiert: Kein Session-Cookie' }, { status: 401 });
+    // Session cookie not found, user is not authenticated
+    return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
   }
 
   try {
-    getAdminApp(); // Ensure Firebase Admin SDK is initialized
-    // Verify the session cookie. This checks for expiry and validity.
-    const decodedToken = await adminAuth().verifySessionCookie(sessionCookie, true);
+    // Verify the session cookie. This will check if it's valid and not revoked.
+    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
     
-    // The role is expected to be a custom claim on the token.
+    // The cookie is valid. Return the user's role from the custom claims.
     const role = decodedToken.role || 'customer';
+    
+    return NextResponse.json({ success: true, role: role }, { status: 200 });
 
-    return NextResponse.json({ success: true, uid: decodedToken.uid, role: role }, { status: 200 });
   } catch (error) {
-    console.error('Fehler bei der Überprüfung des Session-Cookies:', error);
-    // The cookie is invalid, expired, etc.
-    return NextResponse.json({ error: 'Nicht autorisiert: Ungültige Sitzung' }, { status: 401 });
+    // Session cookie is invalid, expired, or revoked.
+    console.error('Fehler bei der Sitzungsüberprüfung:', error);
+    return NextResponse.json({ error: 'Sitzung ungültig' }, { status: 401 });
   }
 }

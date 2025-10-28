@@ -1,11 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useFormStatus } from 'react-dom';
 import { useToast } from '@/hooks/use-toast';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { useAuth } from '@/firebase'; // Import useAuth to get the auth instance
+import { useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,9 +19,8 @@ function SubmitButton({ pending }: { pending: boolean }) {
 
 export function LoginForm() {
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const { toast } = useToast();
-  const auth = useAuth(); // Get the auth instance from your provider
+  const auth = useAuth();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -44,11 +41,9 @@ export function LoginForm() {
     }
 
     try {
-      // 1. Authenticate with Firebase on the client
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const idToken = await userCredential.user.getIdToken();
 
-      // 2. Call the server API to create a session
       const response = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,8 +62,9 @@ export function LoginForm() {
         description: 'Willkommen zurück!',
       });
       
-      // 3. Redirect on success
-      // Use window.location.href for a full page reload to ensure middleware runs correctly
+      // WICHTIG: window.location.href erzwingt ein Neuladen der Seite.
+      // Dadurch wird sichergestellt, dass der Browser den neuen Session-Cookie
+      // bei der nächsten Anfrage korrekt mitsendet.
       window.location.href = redirectUrl || '/dashboard';
 
     } catch (error: any) {

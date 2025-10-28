@@ -26,9 +26,6 @@ interface RegisterState {
   redirectUrl?: string;
 }
 
-
-// handleLogin has been removed from here. The logic is now client-side in login-form.tsx
-
 export async function handleRegister(prevState: any, formData: FormData): Promise<RegisterState> {
   const validatedFields = registerSchema.safeParse(Object.fromEntries(formData.entries()));
 
@@ -99,7 +96,6 @@ export async function handleLogout() {
 
     if(!response.ok) {
         console.error("Server-side logout failed");
-        // Still redirect even if server-side fails, to clear client state
     }
     redirect('/login');
 }
